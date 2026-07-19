@@ -52,3 +52,7 @@ version = "0.1.0"
 [[package]]
 name = "oddutils-vipe"
 version = "0.1.0"
+
+[[package]]
+name = "oddutils-zrun"
+version = "0.1.0"

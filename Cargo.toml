@@ -12,6 +12,7 @@ members = [
     "crates/ts",
     "crates/vidir",
     "crates/vipe",
+    "crates/zrun",
 ]
 resolver = "3"
 

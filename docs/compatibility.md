@@ -165,3 +165,19 @@ Implemented behavior:
 Known difference:
 
 - using `-` for both files is rejected because stdin cannot be read twice.
+
+## zrun
+
+Implemented behavior:
+
+- `zrun command file.gz [...]`
+- transparently decompresses `gz`, `Z`, `bz2`, `xz`, `lzo`, `lzma`, and `zst`
+  arguments to temporary files before running the command
+- passes uncompressed arguments through unchanged
+- returns the command exit status
+- supports `z<program>` invocation behavior when installed under such a name
+
+Known difference:
+
+- decompression currently runs sequentially rather than forking all
+  preprocessors in parallel.

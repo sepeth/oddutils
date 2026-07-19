@@ -34,7 +34,7 @@ packaged like normal Unix tools while still sharing common code.
 | `vidir` | Initial implementation | Edit directory entries in `$EDITOR`. |
 | `vipe` | Initial implementation | Insert an editor into a pipe. |
 | `combine` | Initial implementation | Combine line sets with boolean operations. |
-| `zrun` | Planned | Run commands over compressed arguments. |
+| `zrun` | Initial implementation | Run commands over compressed arguments. |
 | `ifdata` | Planned | Read network interface information. |
 | `lckdo` | Planned | Deprecated upstream; likely lowest priority. |
 | `parallel` | Planned | Lower priority because GNU parallel commonly owns the name. |

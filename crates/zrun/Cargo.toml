@@ -1,0 +1,12 @@
+[package]
+name = "oddutils-zrun"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "zrun"
+path = "src/main.rs"
+
+[lints]
+workspace = true
