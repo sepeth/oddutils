@@ -116,6 +116,7 @@ fn run(config: &Config) -> io::Result<()> {
         output.write_all(timestamp.as_bytes())?;
         output.write_all(b" ")?;
         output.write_all(&line)?;
+        output.flush()?;
         line.clear();
     }
 
@@ -205,6 +206,10 @@ impl UnixTime {
 }
 
 fn format_time(format: &str, stamp: UnixTime, utc: bool) -> io::Result<String> {
+    if format.is_empty() {
+        return Ok(String::new());
+    }
+
     let expanded = expand_subseconds(format, stamp.microseconds);
     let c_format = CString::new(expanded)
         .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "format contains NUL byte"))?;

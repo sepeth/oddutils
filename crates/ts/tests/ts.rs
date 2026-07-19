@@ -14,6 +14,13 @@ fn prefixes_each_line_with_custom_format() {
 }
 
 #[test]
+fn accepts_empty_format() {
+    let output = run_ts(&[""], b"one\n");
+
+    assert_eq!(output.stdout, b" one\n");
+}
+
+#[test]
 fn writes_subsecond_incremental_timestamps() {
     let output = run_ts(&["-i", "%.S"], b"one\n");
     let text = String::from_utf8(output.stdout).unwrap();
