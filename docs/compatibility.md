@@ -71,3 +71,15 @@ Implemented behavior:
 - child stdout and stderr are inherited by `pee`
 - defaults to ignoring SIGPIPE and write errors
 - returns the bitwise OR of child exit statuses
+
+## mispipe
+
+Implemented behavior:
+
+- `mispipe command1 command2`
+- runs both commands through the shell
+- connects `command1` stdout to `command2` stdin
+- inherits `mispipe` stdin for `command1`
+- inherits stdout/stderr for `command2`
+- returns the exit status of `command1`
+- if `command1` is signaled, returns `128 + signal` on Unix
