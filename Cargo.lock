@@ -7,6 +7,10 @@ name = "oddutils-chronic"
 version = "0.1.0"
 
 [[package]]
+name = "oddutils-combine"
+version = "0.1.0"
+
+[[package]]
 name = "oddutils-core"
 version = "0.1.0"
 

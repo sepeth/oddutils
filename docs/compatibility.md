@@ -150,3 +150,18 @@ Known differences:
   compatibility tests.
 - this implementation does not reopen stdin from `/dev/tty` after reading a
   `-` path list.
+
+## combine
+
+Implemented behavior:
+
+- `combine file1 and file2`
+- `combine file1 not file2`
+- `combine file1 or file2`
+- `combine file1 xor file2`
+- supports one `-` argument for stdin
+- preserves upstream-style ordering and duplicate behavior
+
+Known difference:
+
+- using `-` for both files is rejected because stdin cannot be read twice.

@@ -33,7 +33,7 @@ packaged like normal Unix tools while still sharing common code.
 | `errno` | Initial implementation | Look up errno names and descriptions. |
 | `vidir` | Initial implementation | Edit directory entries in `$EDITOR`. |
 | `vipe` | Initial implementation | Insert an editor into a pipe. |
-| `combine` | Planned | Combine line sets with boolean operations. |
+| `combine` | Initial implementation | Combine line sets with boolean operations. |
 | `zrun` | Planned | Run commands over compressed arguments. |
 | `ifdata` | Planned | Read network interface information. |
 | `lckdo` | Planned | Deprecated upstream; likely lowest priority. |
