@@ -3,6 +3,7 @@ use std::env;
 use std::ffi::OsString;
 use std::process::{Command, ExitCode, Output};
 use std::thread::{self, JoinHandle};
+use std::time::Duration;
 
 fn main() -> ExitCode {
     match Config::parse(env::args_os().skip(1)) {
@@ -19,6 +20,7 @@ fn main() -> ExitCode {
 #[derive(Debug)]
 struct Config {
     max_jobs: usize,
+    max_load: Option<f64>,
     replace: bool,
     args_at_once: usize,
     command: Vec<OsString>,
@@ -29,6 +31,7 @@ impl Config {
     fn parse(args: impl IntoIterator<Item = OsString>) -> Result<Self, String> {
         let mut args = args.into_iter();
         let mut max_jobs = std::thread::available_parallelism().map_or(1, usize::from);
+        let mut max_load = None;
         let mut replace = false;
         let mut args_at_once = 1;
         let mut before_separator = Vec::new();
@@ -60,9 +63,15 @@ impl Config {
                     }
                 }
                 "-l" => {
-                    let _ = args
+                    let value = args
                         .next()
                         .ok_or_else(|| "-l requires a value".to_string())?;
+                    max_load = Some(
+                        value
+                            .to_string_lossy()
+                            .parse::<f64>()
+                            .map_err(|_| "option '-l' is not a number".to_string())?,
+                    );
                 }
                 "--" => {
                     let arguments = args.collect::<Vec<_>>();
@@ -77,6 +86,7 @@ impl Config {
                     }
                     return Ok(Self {
                         max_jobs,
+                        max_load,
                         replace,
                         args_at_once,
                         command: before_separator,
@@ -110,6 +120,7 @@ fn run(config: &Config) -> u8 {
             let Some(job) = pending.pop_front() else {
                 break;
             };
+            wait_for_load(config.max_load);
             running.push(thread::spawn(move || run_job(job)));
         }
 
@@ -136,6 +147,22 @@ fn run(config: &Config) -> u8 {
     }
 
     result
+}
+
+fn wait_for_load(max_load: Option<f64>) {
+    let Some(max_load) = max_load else {
+        return;
+    };
+    while load_average() >= max_load {
+        thread::sleep(Duration::from_secs(1));
+    }
+}
+
+fn load_average() -> f64 {
+    let mut load = [0.0_f64; 1];
+    // SAFETY: `load` points to writable memory for one load-average value.
+    let read = unsafe { getloadavg(load.as_mut_ptr(), 1) };
+    if read == 1 { load[0] } else { 0.0 }
 }
 
 #[derive(Debug)]
@@ -173,4 +200,8 @@ fn run_job(job: Job) -> std::io::Result<Output> {
         Job::Shell(command) => Command::new("sh").arg("-c").arg(command).output(),
         Job::Command(command) => Command::new(&command[0]).args(&command[1..]).output(),
     }
+}
+
+unsafe extern "C" {
+    fn getloadavg(loadavg: *mut f64, nelem: i32) -> i32;
 }

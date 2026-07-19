@@ -86,3 +86,35 @@ fn groups_arguments_with_n() {
     assert!(output.status.success(), "{output:?}");
     assert_eq!(output.stdout, b"a-b\n");
 }
+
+#[test]
+fn accepts_max_load_option() {
+    let output = Command::new(parallel_bin())
+        .arg("-j")
+        .arg("1")
+        .arg("-l")
+        .arg("999999")
+        .arg("printf")
+        .arg("%s")
+        .arg("--")
+        .arg("a")
+        .output()
+        .unwrap();
+
+    assert!(output.status.success(), "{output:?}");
+    assert_eq!(output.stdout, b"a");
+}
+
+#[test]
+fn rejects_invalid_max_load() {
+    let output = Command::new(parallel_bin())
+        .arg("-l")
+        .arg("not-a-number")
+        .arg("--")
+        .arg("true")
+        .output()
+        .unwrap();
+
+    assert_eq!(output.status.code(), Some(2));
+    assert!(String::from_utf8_lossy(&output.stderr).contains("not a number"));
+}
