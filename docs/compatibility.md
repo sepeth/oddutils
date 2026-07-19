@@ -17,3 +17,20 @@ Implemented behavior:
   regular files
 
 Intentional differences from upstream may be added here as they are discovered.
+
+## ts
+
+Implemented behavior:
+
+- `ts [-i | -s] [-m] [format]`
+- adds a timestamp plus one space to the beginning of each input line
+- defaults to `%b %d %H:%M:%S` for absolute timestamps
+- defaults to `%H:%M:%S` for `-i` and `-s`
+- supports custom `strftime(3)` formats
+- supports moreutils-style subsecond `%.S`, `%.s`, and `%.T` expansions
+
+Known gap:
+
+- `-r` timestamp conversion is not implemented yet. Upstream uses Perl
+  `Date::Parse` and `Time::Duration`; oddutils needs a deliberate Rust date
+  parsing strategy before enabling this mode.

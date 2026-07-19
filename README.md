@@ -24,7 +24,7 @@ packaged like normal Unix tools while still sharing common code.
 | Utility | Status | Notes |
 | --- | --- | --- |
 | `sponge` | Initial implementation | Reads all input before writing the output file; supports `-a`. |
-| `ts` | Planned | Timestamp standard input. |
+| `ts` | Initial implementation | Timestamp standard input; `-r` is not implemented yet. |
 | `chronic` | Planned | Run a command quietly unless it fails. |
 | `ifne` | Planned | Run a command if standard input is not empty. |
 | `pee` | Planned | Tee standard input to pipes. |

@@ -1,0 +1,12 @@
+[package]
+name = "oddutils-ts"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "ts"
+path = "src/main.rs"
+
+[lints]
+workspace = true

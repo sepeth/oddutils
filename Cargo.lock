@@ -12,3 +12,7 @@ version = "0.1.0"
 dependencies = [
  "oddutils-core",
 ]
+
+[[package]]
+name = "oddutils-ts"
+version = "0.1.0"

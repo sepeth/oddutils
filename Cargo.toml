@@ -2,6 +2,7 @@
 members = [
     "crates/oddutils-core",
     "crates/sponge",
+    "crates/ts",
 ]
 resolver = "3"
 
