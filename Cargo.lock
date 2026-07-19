@@ -74,3 +74,6 @@ dependencies = [
 [[package]]
 name = "oddutils-zrun"
 version = "0.1.0"
+dependencies = [
+ "oddutils-core",
+]

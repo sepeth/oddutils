@@ -13,6 +13,71 @@ pub struct TempFile {
     file: File,
 }
 
+/// A temporary path removed on drop.
+///
+/// This is useful for commands that need a file name to hand to another
+/// process, but do not need to keep the original file descriptor open.
+#[derive(Debug)]
+pub struct TempPath {
+    path: PathBuf,
+}
+
+impl TempPath {
+    /// Create a temporary path in the default system temporary directory.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the temporary directory cannot be accessed or a
+    /// unique path cannot be created.
+    pub fn in_default_dir(prefix: &str, suffix: &str) -> io::Result<Self> {
+        Self::in_dir(prefix, suffix, std::env::temp_dir())
+    }
+
+    /// Create a temporary path in `dir`.
+    ///
+    /// The path is created on disk immediately so another process can safely
+    /// open it without racing another oddutils process.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if `dir` cannot be accessed or a unique path cannot be
+    /// created after several attempts.
+    pub fn in_dir(prefix: &str, suffix: &str, dir: impl AsRef<Path>) -> io::Result<Self> {
+        let dir = dir.as_ref();
+        let pid = std::process::id();
+        let stamp = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_nanos();
+
+        for attempt in 0..1000_u32 {
+            let path = dir.join(format!("{prefix}-{pid}-{stamp}-{attempt}{suffix}"));
+            match OpenOptions::new().write(true).create_new(true).open(&path) {
+                Ok(_) => return Ok(Self { path }),
+                Err(error) if error.kind() == io::ErrorKind::AlreadyExists => {}
+                Err(error) => return Err(error),
+            }
+        }
+
+        Err(io::Error::new(
+            io::ErrorKind::AlreadyExists,
+            "could not create a unique temporary path",
+        ))
+    }
+
+    /// Return the temporary path.
+    #[must_use]
+    pub fn path(&self) -> &Path {
+        &self.path
+    }
+}
+
+impl Drop for TempPath {
+    fn drop(&mut self) {
+        let _ = fs::remove_file(&self.path);
+    }
+}
+
 impl TempFile {
     /// Create a temporary file in `$TMPDIR`, or `/tmp` if `TMPDIR` is unset.
     ///

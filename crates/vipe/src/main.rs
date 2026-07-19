@@ -1,12 +1,11 @@
 use std::env;
 use std::ffi::OsString;
-use std::fs::{self, OpenOptions};
+use std::fs::OpenOptions;
 use std::io::{self, Write};
-use std::path::PathBuf;
 use std::process::{Command, ExitCode};
-use std::time::{SystemTime, UNIX_EPOCH};
 
 use oddutils_core::editor::{attach_tty, editor_command};
+use oddutils_core::temp::TempPath;
 
 fn main() -> ExitCode {
     match Config::parse(env::args_os().skip(1)) {
@@ -59,7 +58,7 @@ impl Config {
 }
 
 fn run(config: &Config) -> io::Result<()> {
-    let temp = TempPath::new(&config.suffix)?;
+    let temp = TempPath::in_default_dir("oddutils-vipe", &config.suffix)?;
     if !stdin_is_tty() {
         let mut file = OpenOptions::new().write(true).open(temp.path())?;
         io::copy(&mut io::stdin().lock(), &mut file)?;
@@ -98,45 +97,6 @@ fn normalize_suffix(suffix: &str) -> String {
 fn stdin_is_tty() -> bool {
     // SAFETY: `isatty` only inspects the supplied file descriptor.
     unsafe { isatty(0) == 1 }
-}
-
-struct TempPath {
-    path: PathBuf,
-}
-
-impl TempPath {
-    fn new(suffix: &str) -> io::Result<Self> {
-        let dir = env::temp_dir();
-        let pid = std::process::id();
-        let stamp = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_nanos();
-
-        for attempt in 0..1000_u32 {
-            let path = dir.join(format!("oddutils-vipe-{pid}-{stamp}-{attempt}{suffix}"));
-            match OpenOptions::new().write(true).create_new(true).open(&path) {
-                Ok(_) => return Ok(Self { path }),
-                Err(error) if error.kind() == io::ErrorKind::AlreadyExists => {}
-                Err(error) => return Err(error),
-            }
-        }
-
-        Err(io::Error::new(
-            io::ErrorKind::AlreadyExists,
-            "could not create a unique temporary file",
-        ))
-    }
-
-    fn path(&self) -> &PathBuf {
-        &self.path
-    }
-}
-
-impl Drop for TempPath {
-    fn drop(&mut self) {
-        let _ = fs::remove_file(&self.path);
-    }
 }
 
 unsafe extern "C" {

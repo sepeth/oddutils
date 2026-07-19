@@ -1,10 +1,11 @@
 use std::env;
 use std::ffi::{OsStr, OsString};
-use std::fs::{self, OpenOptions};
+use std::fs::OpenOptions;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, ExitCode, Stdio};
-use std::time::{SystemTime, UNIX_EPOCH};
+
+use oddutils_core::temp::TempPath;
 
 fn main() -> ExitCode {
     match Config::parse(env::args_os()) {
@@ -70,9 +71,11 @@ fn run(config: &Config) -> io::Result<u8> {
     let mut args = Vec::new();
 
     for arg in &config.args {
-        if let Some(kind) = Compression::from_path(Path::new(arg)) {
-            let temp = TempPath::new(Path::new(arg))?;
-            let child = spawn_decompressor(kind, Path::new(arg), temp.path())?;
+        let path = Path::new(arg);
+        if let Some(kind) = Compression::from_path(path) {
+            let suffix = temp_suffix(path);
+            let temp = TempPath::in_default_dir("oddutils-zrun", &suffix)?;
+            let child = spawn_decompressor(kind, path, temp.path())?;
             args.push(temp.path().as_os_str().to_owned());
             preprocessors.push(Preprocessor {
                 input: PathBuf::from(arg),
@@ -165,45 +168,9 @@ impl Compression {
     }
 }
 
-struct TempPath {
-    path: PathBuf,
-}
-
-impl TempPath {
-    fn new(source: &Path) -> io::Result<Self> {
-        let dir = env::temp_dir();
-        let pid = std::process::id();
-        let stamp = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_nanos();
-        let suffix = source
-            .file_stem()
-            .and_then(OsStr::to_str)
-            .map_or(String::new(), |stem| format!("-{stem}"));
-
-        for attempt in 0..1000_u32 {
-            let path = dir.join(format!("oddutils-zrun-{pid}-{stamp}-{attempt}{suffix}"));
-            match OpenOptions::new().write(true).create_new(true).open(&path) {
-                Ok(_) => return Ok(Self { path }),
-                Err(error) if error.kind() == io::ErrorKind::AlreadyExists => {}
-                Err(error) => return Err(error),
-            }
-        }
-
-        Err(io::Error::new(
-            io::ErrorKind::AlreadyExists,
-            "could not create a unique temporary file",
-        ))
-    }
-
-    fn path(&self) -> &Path {
-        &self.path
-    }
-}
-
-impl Drop for TempPath {
-    fn drop(&mut self) {
-        let _ = fs::remove_file(&self.path);
-    }
+fn temp_suffix(source: &Path) -> String {
+    source
+        .file_stem()
+        .and_then(OsStr::to_str)
+        .map_or(String::new(), |stem| format!("-{stem}"))
 }

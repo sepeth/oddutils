@@ -5,9 +5,9 @@ use std::fs::{self, OpenOptions};
 use std::io::{self, BufRead, Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
-use std::time::{SystemTime, UNIX_EPOCH};
 
 use oddutils_core::editor::{attach_tty, editor_command};
+use oddutils_core::temp::TempPath;
 
 fn main() -> ExitCode {
     match Config::parse(env::args_os().skip(1)) {
@@ -76,7 +76,7 @@ impl Config {
 fn run(config: &Config) -> io::Result<bool> {
     let entries = collect_entries(&config.items)?;
     reject_control_chars(&entries)?;
-    let temp = TempPath::new()?;
+    let temp = TempPath::in_default_dir("oddutils-vidir", "")?;
     write_edit_file(temp.path(), &entries)?;
 
     let editor = editor_command();
@@ -316,44 +316,5 @@ fn remove_path(path: &Path) -> io::Result<()> {
         fs::remove_dir(path)
     } else {
         fs::remove_file(path)
-    }
-}
-
-struct TempPath {
-    path: PathBuf,
-}
-
-impl TempPath {
-    fn new() -> io::Result<Self> {
-        let dir = env::temp_dir();
-        let pid = std::process::id();
-        let stamp = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_nanos();
-
-        for attempt in 0..1000_u32 {
-            let path = dir.join(format!("oddutils-vidir-{pid}-{stamp}-{attempt}"));
-            match OpenOptions::new().write(true).create_new(true).open(&path) {
-                Ok(_) => return Ok(Self { path }),
-                Err(error) if error.kind() == io::ErrorKind::AlreadyExists => {}
-                Err(error) => return Err(error),
-            }
-        }
-
-        Err(io::Error::new(
-            io::ErrorKind::AlreadyExists,
-            "could not create a unique temporary file",
-        ))
-    }
-
-    fn path(&self) -> &Path {
-        &self.path
-    }
-}
-
-impl Drop for TempPath {
-    fn drop(&mut self) {
-        let _ = fs::remove_file(&self.path);
     }
 }
