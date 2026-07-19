@@ -30,7 +30,7 @@ packaged like normal Unix tools while still sharing common code.
 | `pee` | Initial implementation | Tee standard input to pipes. |
 | `mispipe` | Initial implementation | Pipe two commands, returning the first status. |
 | `isutf8` | Initial implementation | Check input for valid UTF-8. |
-| `errno` | Planned | Look up errno names and descriptions. |
+| `errno` | Initial implementation | Look up errno names and descriptions. |
 | `vidir` | Planned | Edit directory entries in `$EDITOR`. |
 | `vipe` | Planned | Insert an editor into a pipe. |
 | `combine` | Planned | Combine line sets with boolean operations. |

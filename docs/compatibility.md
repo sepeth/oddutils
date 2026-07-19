@@ -99,3 +99,19 @@ Known difference:
 
 - invalid UTF-8 diagnostics use Rust's UTF-8 parser and simpler explanatory
   text instead of the upstream byte-range-specific messages.
+
+## errno
+
+Implemented behavior:
+
+- `errno name-or-code`
+- `errno -l/--list`
+- `errno -s/--search word...`
+- case-insensitive errno name lookup
+- descriptions come from platform `strerror(3)`
+
+Known gaps:
+
+- `-S/--search-all-locales` is not implemented yet.
+- the errno table is curated for common Darwin/POSIX values rather than
+  generated from the active C headers at build time.

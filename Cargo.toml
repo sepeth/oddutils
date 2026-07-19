@@ -2,6 +2,7 @@
 members = [
     "crates/oddutils-core",
     "crates/chronic",
+    "crates/errno",
     "crates/ifne",
     "crates/isutf8",
     "crates/mispipe",
