@@ -19,6 +19,11 @@ implementation quirk.
 Each utility will be a separate binary crate so commands can be installed and
 packaged like normal Unix tools while still sharing common code.
 
+## License
+
+`oddutils` is licensed under the GNU General Public License version 2 only.
+See `COPYING`.
+
 ## Utility Status
 
 | Utility | Status | Notes |
