@@ -34,3 +34,16 @@ Known gap:
 - `-r` timestamp conversion is not implemented yet. Upstream uses Perl
   `Date::Parse` and `Time::Duration`; oddutils needs a deliberate Rust date
   parsing strategy before enabling this mode.
+
+## chronic
+
+Implemented behavior:
+
+- `chronic [-ev] COMMAND...`
+- inherits standard input
+- captures stdout and stderr while the child runs
+- suppresses both streams when the child exits successfully
+- replays captured output when the child exits nonzero or is signaled
+- preserves ordinary nonzero child exit codes
+- `-e` replays stderr and exits `2` when the child succeeds but writes stderr
+- `-v` prints `STDOUT`, `STDERR`, and `RETVAL` labels around replayed output

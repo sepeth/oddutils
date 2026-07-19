@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "crates/oddutils-core",
+    "crates/chronic",
     "crates/sponge",
     "crates/ts",
 ]
