@@ -1,10 +1,12 @@
 use std::env;
 use std::ffi::OsString;
-use std::fs::{self, File, OpenOptions};
+use std::fs::{self, OpenOptions};
 use std::io::{self, Write};
 use std::path::PathBuf;
-use std::process::{Command, ExitCode, Stdio};
+use std::process::{Command, ExitCode};
 use std::time::{SystemTime, UNIX_EPOCH};
+
+use oddutils_core::editor::{attach_tty, editor_command};
 
 fn main() -> ExitCode {
     match Config::parse(env::args_os().skip(1)) {
@@ -93,32 +95,9 @@ fn normalize_suffix(suffix: &str) -> String {
     }
 }
 
-fn editor_command() -> Vec<OsString> {
-    if let Some(editor) = env::var_os("VISUAL").or_else(|| env::var_os("EDITOR")) {
-        return editor
-            .to_string_lossy()
-            .split_whitespace()
-            .map(OsString::from)
-            .collect();
-    }
-    if PathBuf::from("/usr/bin/editor").is_file() {
-        return vec![OsString::from("/usr/bin/editor")];
-    }
-    vec![OsString::from("vi")]
-}
-
 fn stdin_is_tty() -> bool {
     // SAFETY: `isatty` only inspects the supplied file descriptor.
     unsafe { isatty(0) == 1 }
-}
-
-fn attach_tty(command: &mut Command) {
-    if let Ok(tty) = File::options().read(true).write(true).open("/dev/tty") {
-        if let Ok(stdin) = tty.try_clone() {
-            command.stdin(Stdio::from(stdin));
-        }
-        command.stdout(Stdio::from(tty));
-    }
 }
 
 struct TempPath {

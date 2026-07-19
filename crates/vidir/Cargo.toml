@@ -8,5 +8,8 @@ license.workspace = true
 name = "vidir"
 path = "src/main.rs"
 
+[dependencies]
+oddutils-core = { path = "../oddutils-core" }
+
 [lints]
 workspace = true

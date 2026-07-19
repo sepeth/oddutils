@@ -8,5 +8,8 @@ license.workspace = true
 name = "vipe"
 path = "src/main.rs"
 
+[dependencies]
+oddutils-core = { path = "../oddutils-core" }
+
 [lints]
 workspace = true

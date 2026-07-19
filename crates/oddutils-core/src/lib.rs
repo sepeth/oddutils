@@ -4,5 +4,6 @@
 //! programs, with shared code limited to IO, filesystem, and error handling that
 //! would otherwise be repeated.
 
+pub mod editor;
 pub mod temp;
 pub mod unix;
