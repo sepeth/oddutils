@@ -4,6 +4,7 @@ use std::io::{self, Write};
 use std::process::{Command, ExitCode, Stdio};
 use std::thread;
 
+use oddutils_core::io::copy_ignoring_broken_pipe;
 use oddutils_core::process::status_code;
 
 fn main() -> ExitCode {
@@ -75,11 +76,7 @@ fn run(config: &Config) -> io::Result<u8> {
     let copier = thread::spawn(move || {
         let mut input = first_stdout;
         let mut output = second_stdin;
-        match io::copy(&mut input, &mut output) {
-            Ok(_) => Ok(()),
-            Err(error) if error.kind() == io::ErrorKind::BrokenPipe => Ok(()),
-            Err(error) => Err(error),
-        }?;
+        copy_ignoring_broken_pipe(&mut input, &mut output)?;
         output.flush()
     });
 

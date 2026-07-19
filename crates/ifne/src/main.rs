@@ -3,6 +3,7 @@ use std::ffi::OsString;
 use std::io::{self, Read, Write};
 use std::process::{Command, ExitCode, Stdio};
 
+use oddutils_core::io::{copy_ignoring_broken_pipe, write_all_ignoring_broken_pipe};
 use oddutils_core::process::status_code;
 
 fn main() -> ExitCode {
@@ -80,16 +81,8 @@ fn run_command(command: &[OsString], first: &[u8], rest: &mut impl Read) -> io::
         .spawn()?;
 
     if let Some(mut child_stdin) = child.stdin.take() {
-        match child_stdin.write_all(first) {
-            Ok(()) => {}
-            Err(error) if error.kind() == io::ErrorKind::BrokenPipe => {}
-            Err(error) => return Err(error),
-        }
-        match io::copy(rest, &mut child_stdin) {
-            Ok(_) => {}
-            Err(error) if error.kind() == io::ErrorKind::BrokenPipe => {}
-            Err(error) => return Err(error),
-        }
+        write_all_ignoring_broken_pipe(&mut child_stdin, first)?;
+        copy_ignoring_broken_pipe(rest, &mut child_stdin)?;
     }
 
     let status = child.wait()?;
