@@ -23,12 +23,10 @@ then writes the edited file to standard output.
 
 *VISUAL*, *EDITOR*
 	Select the editor. *VISUAL* takes precedence over *EDITOR*. If neither is set,
-	*vi* is used.
+	*/usr/bin/editor* is used when available, then *vi*.
 
-# COMPATIBILITY
-
-This implementation does not yet reopen stdin/stdout on */dev/tty* while the
-editor runs.
+When available, the editor is attached to */dev/tty* so editor interaction does
+not write into the pipeline.
 
 # EXIT STATUS
 

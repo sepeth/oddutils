@@ -21,6 +21,12 @@ deprecated upstream in favor of *flock*(1), but is included for compatibility.
 *-W* _seconds_
 	Wait up to _seconds_ for the lock.
 
+*-e*
+	Execute the program directly after acquiring the lock.
+
+*-E* _fd_
+	Execute the program directly and keep the lock open on file descriptor _fd_.
+
 *-n*
 	Do not create _lockfile_ if it does not exist.
 
@@ -35,11 +41,6 @@ deprecated upstream in favor of *flock*(1), but is included for compatibility.
 
 *-t*
 	Test whether the lock is held.
-
-# COMPATIBILITY
-
-*-e* and *-E* are accepted but do not yet faithfully implement direct exec
-semantics.
 
 # EXIT STATUS
 

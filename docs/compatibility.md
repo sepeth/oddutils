@@ -12,6 +12,7 @@ Implemented behavior:
 - writes to standard output if no file is supplied
 - preserves permissions for an existing regular output file
 - replaces regular output files atomically with `rename(2)` when possible
+- falls back to direct copy if an atomic rename fails
 - falls back to direct writing for special files and symlinks
 - with `-a`, produces original file contents followed by standard input for
   regular files
@@ -28,6 +29,8 @@ Implemented behavior:
 - defaults to `%H:%M:%S` for `-i` and `-s`
 - supports custom `strftime(3)` formats
 - supports moreutils-style subsecond `%.S`, `%.s`, and `%.T` expansions
+- accepts an empty format string
+- flushes output after each stamped line
 
 Known gap:
 
@@ -55,6 +58,8 @@ Implemented behavior:
 - `ifne [-n] command [args]`
 - exits successfully without running the command when stdin is empty
 - runs the command with stdin forwarded when stdin is not empty
+- starts the command after the initial nonempty read and streams the remaining
+  stdin instead of buffering all input first
 - with `-n`, runs the command only when stdin is empty
 - with `-n` and nonempty stdin, writes stdin back to stdout without running the
   command
@@ -70,6 +75,7 @@ Implemented behavior:
 - does not copy stdin to stdout by itself
 - child stdout and stderr are inherited by `pee`
 - defaults to ignoring SIGPIPE and write errors
+- closes all child input pipes and waits for children on write-error shutdown
 - returns the bitwise OR of child exit statuses
 
 ## mispipe
@@ -107,12 +113,12 @@ Implemented behavior:
 - `errno name-or-code`
 - `errno -l/--list`
 - `errno -s/--search word...`
+- `errno -S/--search-all-locales word...`
 - case-insensitive errno name lookup
 - descriptions come from platform `strerror(3)`
 
-Known gaps:
+Known gap:
 
-- `-S/--search-all-locales` is not implemented yet.
 - the errno table is curated for common Darwin/POSIX values rather than
   generated from the active C headers at build time.
 
@@ -123,13 +129,10 @@ Implemented behavior:
 - `vipe [--suffix=extension]`
 - reads stdin into a temporary file
 - runs `$VISUAL`, then `$EDITOR`, then `vi`
+- uses `/usr/bin/editor` before `vi` when no editor environment variable is set
+- attaches the editor to `/dev/tty` when available
 - writes the edited temporary file to stdout
 - supports suffix values with or without a leading dot
-
-Known difference:
-
-- this implementation does not yet reopen stdin/stdout on `/dev/tty` while the
-  editor runs.
 
 ## vidir
 
@@ -140,16 +143,16 @@ Implemented behavior:
 - expands directory arguments to their direct children
 - reads newline-delimited paths from stdin for `-`
 - writes numbered edit lines to a temporary file and runs `$VISUAL`, then
-  `$EDITOR`, then `vi`
+  `$EDITOR`, then `/usr/bin/editor`, then `vi`
+- attaches the editor to `/dev/tty` when available
 - renames changed paths and removes paths whose lines were deleted
+- removes paths whose edited name is empty
 - creates parent directories for edited target paths
 
 Known differences:
 
 - swap/conflict handling is simpler than upstream and needs broader
   compatibility tests.
-- this implementation does not reopen stdin from `/dev/tty` after reading a
-  `-` path list.
 
 ## combine
 
@@ -161,6 +164,7 @@ Implemented behavior:
 - `combine file1 xor file2`
 - supports one `-` argument for stdin
 - preserves upstream-style ordering and duplicate behavior
+- preserves carriage returns in input lines like upstream Perl `chomp`
 
 Known difference:
 
@@ -176,11 +180,7 @@ Implemented behavior:
 - passes uncompressed arguments through unchanged
 - returns the command exit status
 - supports `z<program>` invocation behavior when installed under such a name
-
-Known difference:
-
-- decompression currently runs sequentially rather than forking all
-  preprocessors in parallel.
+- launches preprocessors for compressed arguments before waiting for them
 
 ## ifdata
 
@@ -204,15 +204,10 @@ Known gaps:
 Implemented behavior:
 
 - `lckdo [options] lockfile program [arguments]`
-- supports `-w`, `-W sec`, `-n`, `-q`, `-s`, `-x`, and `-t`
+- supports `-w`, `-W sec`, `-e`, `-E fd`, `-n`, `-q`, `-s`, `-x`, and `-t`
 - uses Unix `flock`
 - returns the child exit status after successfully acquiring the lock
 - returns `EX_TEMPFAIL` (`75`) when the lock is held
-
-Known gap:
-
-- direct `exec` behavior for `-e`/`-E` is accepted but not faithfully
-  implemented; commands are still spawned and waited for.
 
 ## parallel
 
@@ -220,12 +215,11 @@ Implemented behavior:
 
 - `parallel [OPTIONS] command -- arguments`
 - `parallel [OPTIONS] -- commands`
-- supports `-j maxjobs`, `-i`, and `-n args`
+- supports `-j maxjobs`, `-l maxload`, `-i`, and `-n args`
 - runs raw commands through the shell in `parallel -- command...` mode
 - ORs child exit statuses for its own exit status
 
-Known gaps:
+Known gap:
 
-- `-l maxload` is parsed but not enforced yet.
 - stdout/stderr are captured per job and replayed when each job finishes rather
   than streamed through live serialization pipes.

@@ -12,16 +12,13 @@ zrun - automatically uncompress arguments to a command
 
 *zrun* transparently decompresses compressed file arguments into temporary files
 before running _command_. Uncompressed arguments are passed through unchanged.
+Preprocessors for compressed arguments are launched before *zrun* waits for
+them to finish.
 
 Supported extensions are *gz*, *Z*, *bz2*, *xz*, *lzo*, *lzma*, and *zst*.
 
 If installed under a name beginning with *z*, such as *zcatlike*, invocation is
 treated as *zrun catlike ...*.
-
-# COMPATIBILITY
-
-Decompression currently runs sequentially rather than forking all preprocessors
-in parallel.
 
 # EXIT STATUS
 

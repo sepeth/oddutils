@@ -28,10 +28,9 @@ descriptions.
 	Search descriptions case-insensitively for all supplied words.
 
 *-S*, *--search-all-locales*
-	Reserved for searching all installed locales. This mode is not implemented
-	yet.
+	Search descriptions in all locales reported by *locale -a*.
 
 # EXIT STATUS
 
 Returns 0 when all requested lookups are understood. Returns nonzero for unknown
-names, unknown codes, usage errors, and unimplemented modes.
+names, unknown codes, usage errors, or locale search setup failures.

@@ -23,12 +23,14 @@ direct children. Use *-* to read newline-delimited paths from standard input.
 
 *VISUAL*, *EDITOR*
 	Select the editor. *VISUAL* takes precedence over *EDITOR*. If neither is set,
-	*vi* is used.
+	*/usr/bin/editor* is used when available, then *vi*.
+
+When available, the editor is attached to */dev/tty*.
 
 # COMPATIBILITY
 
-Swap/conflict handling is simpler than upstream, and stdin is not reopened from
-*/dev/tty* after reading a *-* path list.
+Swap/conflict handling is simpler than upstream and needs broader compatibility
+tests.
 
 # EXIT STATUS
 

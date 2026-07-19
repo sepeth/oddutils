@@ -28,7 +28,8 @@ post-separator argument is run as a shell command.
 	Pass _count_ arguments to each command invocation. Incompatible with *-i*.
 
 *-l* _maxload_
-	Parsed for compatibility, but not enforced yet.
+	Wait to start new jobs while the one-minute load average is at or above
+	_maxload_.
 
 # COMPATIBILITY
 
