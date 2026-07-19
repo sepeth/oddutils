@@ -82,18 +82,19 @@ COMMAND_PREFIX=o just install
 COMMAND_PREFIX=o PREFIX="$HOME/.local" just install
 ```
 
-For a user-local install, binaries go to `~/.Bin` and manpages go to
-`~/.local/share/man/man1`:
+For a user-local install, binaries go to `~/.local/bin` and manpages go to
+`~/.local/share/man/man1` by default:
 
 ```sh
 just install-user
 COMMAND_PREFIX=o just install-user
+USER_PREFIX="$HOME/opt/oddutils" COMMAND_PREFIX=o just install-user
 ```
 
 Make sure both locations are discoverable by your shell:
 
 ```sh
-export PATH="$HOME/.Bin:$PATH"
+export PATH="$HOME/.local/bin:$PATH"
 export MANPATH="$HOME/.local/share/man:$(manpath)"
 ```
 

@@ -4,8 +4,8 @@ command-prefix := env_var_or_default("COMMAND_PREFIX", "")
 bindir := destdir + prefix + "/bin"
 mandir := destdir + prefix + "/share/man"
 man1dir := mandir + "/man1"
-user-bindir := env_var("HOME") + "/.Bin"
 user-prefix := env_var_or_default("USER_PREFIX", env_var("HOME") + "/.local")
+user-bindir := user-prefix + "/bin"
 user-man1dir := user-prefix + "/share/man/man1"
 bins := "chronic combine errno ifdata ifne isutf8 lckdo mispipe parallel pee sponge ts vidir vipe zrun"
 
