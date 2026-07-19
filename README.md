@@ -82,11 +82,19 @@ COMMAND_PREFIX=o just install
 COMMAND_PREFIX=o PREFIX="$HOME/.local" just install
 ```
 
-For a user-local `~/.Bin` binary install without manpages:
+For a user-local install, binaries go to `~/.Bin` and manpages go to
+`~/.local/share/man/man1`:
 
 ```sh
 just install-user
 COMMAND_PREFIX=o just install-user
+```
+
+Make sure both locations are discoverable by your shell:
+
+```sh
+export PATH="$HOME/.Bin:$PATH"
+export MANPATH="$HOME/.local/share/man:$(manpath)"
 ```
 
 The upstream `moreutils` checkout is expected beside this repository at

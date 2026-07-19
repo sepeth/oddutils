@@ -5,6 +5,8 @@ bindir := destdir + prefix + "/bin"
 mandir := destdir + prefix + "/share/man"
 man1dir := mandir + "/man1"
 user-bindir := env_var("HOME") + "/.Bin"
+user-prefix := env_var_or_default("USER_PREFIX", env_var("HOME") + "/.local")
+user-man1dir := user-prefix + "/share/man/man1"
 bins := "chronic combine errno ifdata ifne isutf8 lckdo mispipe parallel pee sponge ts vidir vipe zrun"
 
 test:
@@ -27,7 +29,7 @@ install: build-release install-man
     for bin in {{bins}}; do install -m 0755 "target/release/$bin" "{{bindir}}/{{command-prefix}}$bin"; done
     printf 'Installed oddutils to %s\n' "{{bindir}}"
 
-install-user: build-release
+install-user: build-release install-user-man
     install -d "{{user-bindir}}"
     for bin in {{bins}}; do install -m 0755 "target/release/$bin" "{{user-bindir}}/{{command-prefix}}$bin"; done
     printf 'Installed oddutils to %s\n' "{{user-bindir}}"
@@ -36,3 +38,8 @@ install-man: man
     install -d "{{man1dir}}"
     for src in docs/man/*.1.scd; do name=$(basename "$src" .1.scd); sed -e "1s/^$name(1)/{{command-prefix}}$name(1)/" -e "s/^$name -/{{command-prefix}}$name -/" -e "s/\\*$name\\*/\\*{{command-prefix}}$name\\*/g" "$src" | scdoc > "{{man1dir}}/{{command-prefix}}$name.1"; chmod 0644 "{{man1dir}}/{{command-prefix}}$name.1"; done
     printf 'Installed oddutils manpages to %s\n' "{{man1dir}}"
+
+install-user-man: man
+    install -d "{{user-man1dir}}"
+    for src in docs/man/*.1.scd; do name=$(basename "$src" .1.scd); sed -e "1s/^$name(1)/{{command-prefix}}$name(1)/" -e "s/^$name -/{{command-prefix}}$name -/" -e "s/\\*$name\\*/\\*{{command-prefix}}$name\\*/g" "$src" | scdoc > "{{user-man1dir}}/{{command-prefix}}$name.1"; chmod 0644 "{{user-man1dir}}/{{command-prefix}}$name.1"; done
+    printf 'Installed oddutils manpages to %s\n' "{{user-man1dir}}"
