@@ -1,0 +1,12 @@
+[package]
+name = "oddutils-lckdo"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "lckdo"
+path = "src/main.rs"
+
+[lints]
+workspace = true

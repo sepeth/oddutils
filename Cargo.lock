@@ -31,6 +31,10 @@ name = "oddutils-isutf8"
 version = "0.1.0"
 
 [[package]]
+name = "oddutils-lckdo"
+version = "0.1.0"
+
+[[package]]
 name = "oddutils-mispipe"
 version = "0.1.0"
 

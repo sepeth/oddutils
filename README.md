@@ -36,7 +36,7 @@ packaged like normal Unix tools while still sharing common code.
 | `combine` | Initial implementation | Combine line sets with boolean operations. |
 | `zrun` | Initial implementation | Run commands over compressed arguments. |
 | `ifdata` | Initial implementation | Read core network interface information. |
-| `lckdo` | Planned | Deprecated upstream; likely lowest priority. |
+| `lckdo` | Initial implementation | Run a command with a lock held. |
 | `parallel` | Planned | Lower priority because GNU parallel commonly owns the name. |
 
 ## Development

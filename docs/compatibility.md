@@ -198,3 +198,18 @@ Known gaps:
   yet.
 - this implementation shells out to `ifconfig` instead of using ioctl calls
   directly.
+
+## lckdo
+
+Implemented behavior:
+
+- `lckdo [options] lockfile program [arguments]`
+- supports `-w`, `-W sec`, `-n`, `-q`, `-s`, `-x`, and `-t`
+- uses Unix `flock`
+- returns the child exit status after successfully acquiring the lock
+- returns `EX_TEMPFAIL` (`75`) when the lock is held
+
+Known gap:
+
+- direct `exec` behavior for `-e`/`-E` is accepted but not faithfully
+  implemented; commands are still spawned and waited for.
