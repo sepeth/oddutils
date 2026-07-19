@@ -1,9 +1,9 @@
 use std::env;
 use std::ffi::OsString;
-use std::fs::{self, OpenOptions};
+use std::fs::{self, File, OpenOptions};
 use std::io::{self, Write};
 use std::path::PathBuf;
-use std::process::{Command, ExitCode};
+use std::process::{Command, ExitCode, Stdio};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 fn main() -> ExitCode {
@@ -58,17 +58,17 @@ impl Config {
 
 fn run(config: &Config) -> io::Result<()> {
     let temp = TempPath::new(&config.suffix)?;
-    {
+    if !stdin_is_tty() {
         let mut file = OpenOptions::new().write(true).open(temp.path())?;
         io::copy(&mut io::stdin().lock(), &mut file)?;
         file.flush()?;
     }
 
     let editor = editor_command();
-    let status = Command::new(&editor[0])
-        .args(&editor[1..])
-        .arg(temp.path())
-        .status()?;
+    let mut command = Command::new(&editor[0]);
+    command.args(&editor[1..]).arg(temp.path());
+    attach_tty(&mut command);
+    let status = command.status()?;
     if !status.success() {
         return Err(io::Error::other(format!(
             "{} exited nonzero, aborting",
@@ -101,7 +101,24 @@ fn editor_command() -> Vec<OsString> {
             .map(OsString::from)
             .collect();
     }
+    if PathBuf::from("/usr/bin/editor").is_file() {
+        return vec![OsString::from("/usr/bin/editor")];
+    }
     vec![OsString::from("vi")]
+}
+
+fn stdin_is_tty() -> bool {
+    // SAFETY: `isatty` only inspects the supplied file descriptor.
+    unsafe { isatty(0) == 1 }
+}
+
+fn attach_tty(command: &mut Command) {
+    if let Ok(tty) = File::options().read(true).write(true).open("/dev/tty") {
+        if let Ok(stdin) = tty.try_clone() {
+            command.stdin(Stdio::from(stdin));
+        }
+        command.stdout(Stdio::from(tty));
+    }
 }
 
 struct TempPath {
@@ -141,4 +158,8 @@ impl Drop for TempPath {
     fn drop(&mut self) {
         let _ = fs::remove_file(&self.path);
     }
+}
+
+unsafe extern "C" {
+    fn isatty(fd: i32) -> i32;
 }
