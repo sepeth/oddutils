@@ -3,7 +3,7 @@ use std::ffi::{OsStr, OsString};
 use std::fs::{self, OpenOptions};
 use std::io;
 use std::path::{Path, PathBuf};
-use std::process::{Command, ExitCode, Stdio};
+use std::process::{Child, Command, ExitCode, Stdio};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 fn main() -> ExitCode {
@@ -66,16 +66,32 @@ impl Config {
 
 fn run(config: &Config) -> io::Result<u8> {
     let mut temps = Vec::new();
+    let mut preprocessors = Vec::new();
     let mut args = Vec::new();
 
     for arg in &config.args {
         if let Some(kind) = Compression::from_path(Path::new(arg)) {
             let temp = TempPath::new(Path::new(arg))?;
-            decompress(kind, Path::new(arg), temp.path())?;
+            let child = spawn_decompressor(kind, Path::new(arg), temp.path())?;
             args.push(temp.path().as_os_str().to_owned());
+            preprocessors.push(Preprocessor {
+                input: PathBuf::from(arg),
+                child,
+            });
             temps.push(temp);
         } else {
             args.push(arg.clone());
+        }
+    }
+
+    for mut preprocessor in preprocessors {
+        let status = preprocessor.child.wait()?;
+        if !status.success() {
+            return Err(io::Error::other(format!(
+                "preprocessing for {} terminated with code {}",
+                preprocessor.input.display(),
+                status.code().unwrap_or(1)
+            )));
         }
     }
 
@@ -92,24 +108,18 @@ fn run(config: &Config) -> io::Result<u8> {
         .unwrap_or(1))
 }
 
-fn decompress(kind: Compression, input: &Path, output: &Path) -> io::Result<()> {
+fn spawn_decompressor(kind: Compression, input: &Path, output: &Path) -> io::Result<Child> {
     let file = OpenOptions::new().write(true).truncate(true).open(output)?;
-    let status = Command::new(kind.program())
+    Command::new(kind.program())
         .args(kind.args())
         .arg(input)
         .stdout(Stdio::from(file.try_clone()?))
-        .status()?;
-    drop(file);
+        .spawn()
+}
 
-    if status.success() {
-        Ok(())
-    } else {
-        Err(io::Error::other(format!(
-            "preprocessing for {} terminated with code {}",
-            input.display(),
-            status.code().unwrap_or(1)
-        )))
-    }
+struct Preprocessor {
+    input: PathBuf,
+    child: Child,
 }
 
 #[derive(Debug, Clone, Copy)]
