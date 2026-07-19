@@ -94,7 +94,15 @@ fn read_lines(path: &OsString) -> io::Result<Vec<String>> {
     } else {
         contents = fs::read_to_string(Path::new(path))?;
     }
-    Ok(contents.lines().map(ToOwned::to_owned).collect())
+    Ok(split_perl_chomped_lines(&contents))
+}
+
+fn split_perl_chomped_lines(contents: &str) -> Vec<String> {
+    let mut lines = contents.split('\n').collect::<Vec<_>>();
+    if contents.ends_with('\n') {
+        lines.pop();
+    }
+    lines.into_iter().map(ToOwned::to_owned).collect()
 }
 
 fn compare_or(file1: &[String], file2: &[String]) -> Vec<String> {

@@ -67,6 +67,18 @@ fn reads_one_file_from_stdin() {
     assert_eq!(output.stdout, b"two\n");
 }
 
+#[test]
+fn preserves_carriage_returns_when_splitting_lines() {
+    let temp = TestDir::new();
+    let a = temp.file("a", "two\r\n");
+    let b = temp.file("b", "two\n");
+
+    let output = run_combine(&[&a, "and", &b], b"");
+
+    assert!(output.status.success(), "{output:?}");
+    assert!(output.stdout.is_empty());
+}
+
 fn run_combine(args: &[&str], stdin: &[u8]) -> std::process::Output {
     let mut command = Command::new(combine_bin());
     for arg in args {
