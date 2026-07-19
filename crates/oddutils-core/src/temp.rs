@@ -3,6 +3,7 @@
 
 use std::fs::{self, File, OpenOptions};
 use std::io;
+use std::os::unix::fs::OpenOptionsExt;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -52,7 +53,7 @@ impl TempPath {
 
         for attempt in 0..1000_u32 {
             let path = dir.join(format!("{prefix}-{pid}-{stamp}-{attempt}{suffix}"));
-            match OpenOptions::new().write(true).create_new(true).open(&path) {
+            match private_temp_options().write(true).open(&path) {
                 Ok(_) => return Ok(Self { path }),
                 Err(error) if error.kind() == io::ErrorKind::AlreadyExists => {}
                 Err(error) => return Err(error),
@@ -106,12 +107,7 @@ impl TempFile {
 
         for attempt in 0..1000_u32 {
             let path = dir.join(format!("{prefix}.{pid}.{stamp}.{attempt}.tmp"));
-            match OpenOptions::new()
-                .read(true)
-                .write(true)
-                .create_new(true)
-                .open(&path)
-            {
+            match private_temp_options().read(true).write(true).open(&path) {
                 Ok(file) => {
                     return Ok(Self {
                         path: Some(path),
@@ -194,11 +190,18 @@ impl Drop for TempFile {
     }
 }
 
+fn private_temp_options() -> OpenOptions {
+    let mut options = OpenOptions::new();
+    options.create_new(true).mode(0o600);
+    options
+}
+
 #[cfg(test)]
 mod tests {
-    use super::TempFile;
+    use super::{TempFile, TempPath};
     use std::fs;
     use std::io::{Read, Seek, SeekFrom, Write};
+    use std::os::unix::fs::PermissionsExt;
     use std::path::{Path, PathBuf};
     use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -220,6 +223,26 @@ mod tests {
 
         assert_eq!(contents, "content");
         assert!(temp.path().exists());
+    }
+
+    #[test]
+    fn temp_file_is_private() {
+        let dir = TestDir::new();
+        let temp = TempFile::in_dir("oddutils-test", dir.path()).unwrap();
+
+        assert_eq!(mode(temp.path()), 0o600);
+    }
+
+    #[test]
+    fn temp_path_is_private() {
+        let dir = TestDir::new();
+        let temp = TempPath::in_dir("oddutils-test", "", dir.path()).unwrap();
+
+        assert_eq!(mode(temp.path()), 0o600);
+    }
+
+    fn mode(path: &Path) -> u32 {
+        fs::metadata(path).unwrap().permissions().mode() & 0o777
     }
 
     struct TestDir {
