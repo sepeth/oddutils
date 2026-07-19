@@ -1,10 +1,10 @@
 use std::collections::{BTreeMap, HashMap};
 use std::env;
 use std::ffi::OsString;
-use std::fs::{self, OpenOptions};
+use std::fs::{self, File, OpenOptions};
 use std::io::{self, BufRead, Read, Write};
 use std::path::{Path, PathBuf};
-use std::process::{Command, ExitCode};
+use std::process::{Command, ExitCode, Stdio};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 fn main() -> ExitCode {
@@ -78,10 +78,10 @@ fn run(config: &Config) -> io::Result<bool> {
     write_edit_file(temp.path(), &entries)?;
 
     let editor = editor_command();
-    let status = Command::new(&editor[0])
-        .args(&editor[1..])
-        .arg(temp.path())
-        .status()?;
+    let mut command = Command::new(&editor[0]);
+    command.args(&editor[1..]).arg(temp.path());
+    attach_tty(&mut command);
+    let status = command.status()?;
     if !status.success() {
         return Err(io::Error::other(format!(
             "{} exited nonzero, aborting",
@@ -183,8 +183,11 @@ fn apply_edit_file(
             ));
         };
 
+        if new_path.as_os_str().is_empty() {
+            continue;
+        }
         remaining.remove(&number);
-        if new_path == src || new_path.as_os_str().is_empty() {
+        if new_path == src {
             continue;
         }
 
@@ -254,19 +257,27 @@ fn apply_edit_file(
 }
 
 fn parse_line(line: &str) -> io::Result<(usize, PathBuf)> {
-    let Some((number, name)) = line.split_once(char::is_whitespace) else {
+    let digit_end = line
+        .char_indices()
+        .find_map(|(index, character)| (!character.is_ascii_digit()).then_some(index))
+        .unwrap_or(line.len());
+    if digit_end == 0 {
         return Err(io::Error::new(
             io::ErrorKind::InvalidInput,
             format!("unable to parse line \"{line}\", aborting"),
         ));
-    };
-    let number = number.parse::<usize>().map_err(|error| {
+    }
+
+    let number = line[..digit_end].parse::<usize>().map_err(|error| {
         io::Error::new(
             io::ErrorKind::InvalidInput,
             format!("unable to parse item number in \"{line}\": {error}"),
         )
     })?;
-    Ok((number, PathBuf::from(name.trim_start())))
+    let name = line[digit_end..]
+        .strip_prefix('\t')
+        .unwrap_or(&line[digit_end..]);
+    Ok((number, PathBuf::from(name)))
 }
 
 fn conflict_path(path: &Path) -> PathBuf {
@@ -314,7 +325,19 @@ fn editor_command() -> Vec<OsString> {
             .map(OsString::from)
             .collect();
     }
+    if PathBuf::from("/usr/bin/editor").is_file() {
+        return vec![OsString::from("/usr/bin/editor")];
+    }
     vec![OsString::from("vi")]
+}
+
+fn attach_tty(command: &mut Command) {
+    if let Ok(tty) = File::options().read(true).write(true).open("/dev/tty") {
+        if let Ok(stdin) = tty.try_clone() {
+            command.stdin(Stdio::from(stdin));
+        }
+        command.stdout(Stdio::from(tty));
+    }
 }
 
 struct TempPath {

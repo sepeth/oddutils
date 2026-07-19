@@ -41,6 +41,19 @@ fn deletes_removed_lines() {
 }
 
 #[test]
+fn deletes_item_with_empty_edited_name() {
+    let temp = TestDir::new();
+    let file = temp.path().join("delete-empty-name.txt");
+    fs::write(&file, "data").unwrap();
+    let editor = temp.editor("#!/bin/sh\ncut -f1 \"$1\" > \"$1.tmp\" && mv \"$1.tmp\" \"$1\"\n");
+
+    let output = run_vidir(&editor, &[file.as_path()], b"");
+
+    assert!(output.status.success(), "{output:?}");
+    assert!(!file.exists());
+}
+
+#[test]
 fn reads_file_list_from_stdin() {
     let temp = TestDir::new();
     let old = temp.path().join("stdin-old");
