@@ -49,22 +49,27 @@ impl Config {
 }
 
 fn run(config: &Config) -> io::Result<u8> {
-    let mut input = Vec::new();
-    io::stdin().lock().read_to_end(&mut input)?;
+    let stdin = io::stdin();
+    let mut stdin = stdin.lock();
+    let mut first = [0_u8; 8192];
+    let first_read = stdin.read(&mut first)?;
 
-    if input.is_empty() && !config.run_if_empty {
+    if first_read == 0 && !config.run_if_empty {
         return Ok(0);
     }
 
-    if !input.is_empty() && config.run_if_empty {
-        io::stdout().lock().write_all(&input)?;
+    if first_read > 0 && config.run_if_empty {
+        let stdout = io::stdout();
+        let mut stdout = stdout.lock();
+        stdout.write_all(&first[..first_read])?;
+        io::copy(&mut stdin, &mut stdout)?;
         return Ok(0);
     }
 
-    run_command(&config.command, &input)
+    run_command(&config.command, &first[..first_read], &mut stdin)
 }
 
-fn run_command(command: &[OsString], input: &[u8]) -> io::Result<u8> {
+fn run_command(command: &[OsString], first: &[u8], rest: &mut impl Read) -> io::Result<u8> {
     let mut child = Command::new(&command[0])
         .args(&command[1..])
         .stdin(Stdio::piped())
@@ -72,9 +77,14 @@ fn run_command(command: &[OsString], input: &[u8]) -> io::Result<u8> {
         .stderr(Stdio::inherit())
         .spawn()?;
 
-    if let Some(mut stdin) = child.stdin.take() {
-        match stdin.write_all(input) {
+    if let Some(mut child_stdin) = child.stdin.take() {
+        match child_stdin.write_all(first) {
             Ok(()) => {}
+            Err(error) if error.kind() == io::ErrorKind::BrokenPipe => {}
+            Err(error) => return Err(error),
+        }
+        match io::copy(rest, &mut child_stdin) {
+            Ok(_) => {}
             Err(error) if error.kind() == io::ErrorKind::BrokenPipe => {}
             Err(error) => return Err(error),
         }
