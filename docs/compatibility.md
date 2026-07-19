@@ -83,3 +83,19 @@ Implemented behavior:
 - inherits stdout/stderr for `command2`
 - returns the exit status of `command1`
 - if `command1` is signaled, returns `128 + signal` on Unix
+
+## isutf8
+
+Implemented behavior:
+
+- `isutf8 [OPTION]... [FILE]...`
+- reads standard input when no files are supplied
+- supports `-q/--quiet`, `-l/--list`, `--list-only`, `-i/--invert`, and
+  `-v/--verbose`
+- returns success only when all checked inputs are valid UTF-8
+- lists valid files with `-i` and invalid files with `-l`
+
+Known difference:
+
+- invalid UTF-8 diagnostics use Rust's UTF-8 parser and simpler explanatory
+  text instead of the upstream byte-range-specific messages.

@@ -29,7 +29,7 @@ packaged like normal Unix tools while still sharing common code.
 | `ifne` | Initial implementation | Run a command if standard input is not empty. |
 | `pee` | Initial implementation | Tee standard input to pipes. |
 | `mispipe` | Initial implementation | Pipe two commands, returning the first status. |
-| `isutf8` | Planned | Check input for valid UTF-8. |
+| `isutf8` | Initial implementation | Check input for valid UTF-8. |
 | `errno` | Planned | Look up errno names and descriptions. |
 | `vidir` | Planned | Edit directory entries in `$EDITOR`. |
 | `vipe` | Planned | Insert an editor into a pipe. |

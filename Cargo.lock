@@ -15,6 +15,10 @@ name = "oddutils-ifne"
 version = "0.1.0"
 
 [[package]]
+name = "oddutils-isutf8"
+version = "0.1.0"
+
+[[package]]
 name = "oddutils-mispipe"
 version = "0.1.0"
 
