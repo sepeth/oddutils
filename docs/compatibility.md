@@ -115,3 +115,18 @@ Known gaps:
 - `-S/--search-all-locales` is not implemented yet.
 - the errno table is curated for common Darwin/POSIX values rather than
   generated from the active C headers at build time.
+
+## vipe
+
+Implemented behavior:
+
+- `vipe [--suffix=extension]`
+- reads stdin into a temporary file
+- runs `$VISUAL`, then `$EDITOR`, then `vi`
+- writes the edited temporary file to stdout
+- supports suffix values with or without a leading dot
+
+Known difference:
+
+- this implementation does not yet reopen stdin/stdout on `/dev/tty` while the
+  editor runs.

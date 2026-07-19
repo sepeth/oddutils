@@ -32,7 +32,7 @@ packaged like normal Unix tools while still sharing common code.
 | `isutf8` | Initial implementation | Check input for valid UTF-8. |
 | `errno` | Initial implementation | Look up errno names and descriptions. |
 | `vidir` | Planned | Edit directory entries in `$EDITOR`. |
-| `vipe` | Planned | Insert an editor into a pipe. |
+| `vipe` | Initial implementation | Insert an editor into a pipe. |
 | `combine` | Planned | Combine line sets with boolean operations. |
 | `zrun` | Planned | Run commands over compressed arguments. |
 | `ifdata` | Planned | Read network interface information. |
