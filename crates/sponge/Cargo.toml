@@ -1,0 +1,15 @@
+[package]
+name = "oddutils-sponge"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "sponge"
+path = "src/main.rs"
+
+[dependencies]
+oddutils-core = { path = "../oddutils-core" }
+
+[lints]
+workspace = true
