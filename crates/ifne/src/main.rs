@@ -3,6 +3,8 @@ use std::ffi::OsString;
 use std::io::{self, Read, Write};
 use std::process::{Command, ExitCode, Stdio};
 
+use oddutils_core::process::status_code;
+
 fn main() -> ExitCode {
     match Config::parse(env::args_os().skip(1)) {
         Ok(config) => match run(&config) {
@@ -91,9 +93,5 @@ fn run_command(command: &[OsString], first: &[u8], rest: &mut impl Read) -> io::
     }
 
     let status = child.wait()?;
-    if let Some(code) = status.code() {
-        Ok(code.try_into().unwrap_or(1))
-    } else {
-        Ok(1)
-    }
+    Ok(status_code(status))
 }

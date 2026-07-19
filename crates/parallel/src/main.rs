@@ -5,6 +5,8 @@ use std::process::{Command, ExitCode, Output};
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
+use oddutils_core::process::status_code;
+
 fn main() -> ExitCode {
     match Config::parse(env::args_os().skip(1)) {
         Ok(config) => ExitCode::from(run(&config)),
@@ -129,11 +131,7 @@ fn run(config: &Config) -> u8 {
             Ok(Ok(output)) => {
                 print!("{}", String::from_utf8_lossy(&output.stdout));
                 eprint!("{}", String::from_utf8_lossy(&output.stderr));
-                result |= output
-                    .status
-                    .code()
-                    .and_then(|code| u8::try_from(code).ok())
-                    .unwrap_or(1);
+                result |= status_code(output.status);
             }
             Ok(Err(error)) => {
                 eprintln!("parallel: {error}");

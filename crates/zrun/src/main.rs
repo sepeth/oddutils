@@ -5,6 +5,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, ExitCode, Stdio};
 
+use oddutils_core::process::status_code;
 use oddutils_core::temp::TempPath;
 
 fn main() -> ExitCode {
@@ -90,10 +91,11 @@ fn run(config: &Config) -> io::Result<u8> {
     for mut preprocessor in preprocessors {
         let status = preprocessor.child.wait()?;
         if !status.success() {
+            let code = status_code(status);
             return Err(io::Error::other(format!(
                 "preprocessing for {} terminated with code {}",
                 preprocessor.input.display(),
-                status.code().unwrap_or(1)
+                code
             )));
         }
     }
@@ -105,10 +107,7 @@ fn run(config: &Config) -> io::Result<u8> {
         .stderr(Stdio::inherit())
         .status()?;
 
-    Ok(status
-        .code()
-        .and_then(|code| u8::try_from(code).ok())
-        .unwrap_or(1))
+    Ok(status_code(status))
 }
 
 fn spawn_decompressor(kind: Compression, input: &Path, output: &Path) -> io::Result<Child> {

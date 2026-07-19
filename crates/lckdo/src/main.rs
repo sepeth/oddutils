@@ -8,6 +8,8 @@ use std::process::{Command, ExitCode, Stdio};
 use std::thread;
 use std::time::{Duration, Instant};
 
+use oddutils_core::process::status_code;
+
 const EX_TEMPFAIL: u8 = 75;
 const EX_USAGE: u8 = 64;
 const EX_CANTCREAT: u8 = 73;
@@ -204,10 +206,7 @@ fn run(config: &Config) -> io::Result<u8> {
     }
 
     let status = command.status()?;
-    Ok(status
-        .code()
-        .and_then(|code| u8::try_from(code).ok())
-        .unwrap_or(1))
+    Ok(status_code(status))
 }
 
 fn prepare_direct_exec_lock_fd(file: &File, keep_fd: Option<RawFd>) -> io::Result<()> {

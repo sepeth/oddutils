@@ -3,6 +3,8 @@ use std::ffi::OsString;
 use std::io::{self, Read, Write};
 use std::process::{Child, ChildStdin, Command, ExitCode, Stdio};
 
+use oddutils_core::process::status_code;
+
 fn main() -> ExitCode {
     match Config::parse(env::args_os().skip(1)) {
         Ok(config) => match run(&config) {
@@ -140,10 +142,7 @@ fn close_and_wait(mut children: Vec<PipeCommand>) -> io::Result<u8> {
     let mut result = 0_u8;
     for mut child in children {
         let status = child.child.wait()?;
-        result |= status
-            .code()
-            .and_then(|code| u8::try_from(code).ok())
-            .unwrap_or(1);
+        result |= status_code(status);
     }
     Ok(result)
 }

@@ -4,8 +4,7 @@ use std::io::{self, Write};
 use std::process::{Command, ExitCode, Stdio};
 use std::thread;
 
-#[cfg(unix)]
-use std::os::unix::process::ExitStatusExt;
+use oddutils_core::process::status_code;
 
 fn main() -> ExitCode {
     match Config::parse(env::args_os().skip(1)) {
@@ -90,20 +89,5 @@ fn run(config: &Config) -> io::Result<u8> {
         .map_err(|_| io::Error::other("pipe copier panicked"))??;
     let _ = second.wait()?;
 
-    Ok(short_status(first_status))
-}
-
-fn short_status(status: std::process::ExitStatus) -> u8 {
-    if let Some(code) = status.code() {
-        return code.try_into().unwrap_or(1);
-    }
-
-    #[cfg(unix)]
-    {
-        if let Some(signal) = status.signal() {
-            return u8::try_from(128 + signal).unwrap_or(1);
-        }
-    }
-
-    1
+    Ok(status_code(first_status))
 }

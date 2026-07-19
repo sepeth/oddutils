@@ -4,6 +4,8 @@ use std::io::{self, Read, Write};
 use std::process::{Command, ExitCode, Stdio};
 use std::thread;
 
+use oddutils_core::process::status_code;
+
 fn main() -> ExitCode {
     match Config::parse(env::args_os().skip(1)) {
         Ok(config) => match run(&config) {
@@ -101,11 +103,7 @@ fn run(config: &Config) -> io::Result<u8> {
         .join()
         .map_err(|_| io::Error::other("stderr reader panicked"))??;
 
-    if let Some(code) = status.code() {
-        if code != 0 {
-            show_output(config.verbose, code, &out, &err)?;
-            return Ok(code.try_into().unwrap_or(1));
-        }
+    if status.success() {
         if config.stderr_trigger && !err.is_empty() {
             show_output(config.verbose, 0, &out, &err)?;
             return Ok(2);
@@ -113,8 +111,9 @@ fn run(config: &Config) -> io::Result<u8> {
         return Ok(0);
     }
 
-    show_output(config.verbose, 1, &out, &err)?;
-    Ok(1)
+    let code = status_code(status);
+    show_output(config.verbose, i32::from(code), &out, &err)?;
+    Ok(code)
 }
 
 fn read_all(mut reader: impl Read) -> io::Result<Vec<u8>> {

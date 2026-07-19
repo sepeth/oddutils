@@ -5,5 +5,6 @@
 //! would otherwise be repeated.
 
 pub mod editor;
+pub mod process;
 pub mod temp;
 pub mod unix;
