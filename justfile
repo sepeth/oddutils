@@ -1,5 +1,6 @@
 prefix := env_var_or_default("PREFIX", "/usr/local")
 destdir := env_var_or_default("DESTDIR", "")
+command-prefix := env_var_or_default("COMMAND_PREFIX", "")
 bindir := destdir + prefix + "/bin"
 mandir := destdir + prefix + "/share/man"
 man1dir := mandir + "/man1"
@@ -23,15 +24,15 @@ man:
 
 install: build-release install-man
     install -d "{{bindir}}"
-    for bin in {{bins}}; do install -m 0755 "target/release/$bin" "{{bindir}}/$bin"; done
+    for bin in {{bins}}; do install -m 0755 "target/release/$bin" "{{bindir}}/{{command-prefix}}$bin"; done
     printf 'Installed oddutils to %s\n' "{{bindir}}"
 
 install-user: build-release
     install -d "{{user-bindir}}"
-    for bin in {{bins}}; do install -m 0755 "target/release/$bin" "{{user-bindir}}/$bin"; done
+    for bin in {{bins}}; do install -m 0755 "target/release/$bin" "{{user-bindir}}/{{command-prefix}}$bin"; done
     printf 'Installed oddutils to %s\n' "{{user-bindir}}"
 
 install-man: man
     install -d "{{man1dir}}"
-    for page in target/man/man1/*.1; do install -m 0644 "$page" "{{man1dir}}/$(basename "$page")"; done
+    for src in docs/man/*.1.scd; do name=$(basename "$src" .1.scd); sed -e "1s/^$name(1)/{{command-prefix}}$name(1)/" -e "s/^$name -/{{command-prefix}}$name -/" -e "s/\\*$name\\*/\\*{{command-prefix}}$name\\*/g" "$src" | scdoc > "{{man1dir}}/{{command-prefix}}$name.1"; chmod 0644 "{{man1dir}}/{{command-prefix}}$name.1"; done
     printf 'Installed oddutils manpages to %s\n' "{{man1dir}}"

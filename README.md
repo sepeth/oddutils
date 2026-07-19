@@ -74,10 +74,19 @@ PREFIX="$HOME/.local" just install
 DESTDIR=/tmp/pkgroot PREFIX=/usr/local just install
 ```
 
+Prefix installed command and manpage names while testing alongside `moreutils`.
+For example, `sponge` installs as `osponge`:
+
+```sh
+COMMAND_PREFIX=o just install
+COMMAND_PREFIX=o PREFIX="$HOME/.local" just install
+```
+
 For a user-local `~/.Bin` binary install without manpages:
 
 ```sh
 just install-user
+COMMAND_PREFIX=o just install-user
 ```
 
 The upstream `moreutils` checkout is expected beside this repository at
