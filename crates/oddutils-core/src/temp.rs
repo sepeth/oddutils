@@ -94,6 +94,22 @@ impl TempFile {
     /// value, which cannot happen through the public API before `self` is
     /// consumed.
     pub fn persist(mut self, dest: impl AsRef<Path>) -> io::Result<()> {
+        self.rename_into_place(dest)
+    }
+
+    /// Rename the temporary file to `dest` and disable drop cleanup.
+    ///
+    /// Unlike [`Self::persist`], this keeps the temporary file available if the
+    /// rename fails, so callers can fall back to copying its contents.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the file cannot be synced or renamed into place.
+    ///
+    /// # Panics
+    ///
+    /// Panics only if called after a successful previous rename.
+    pub fn rename_into_place(&mut self, dest: impl AsRef<Path>) -> io::Result<()> {
         self.file.sync_all()?;
         let path = self
             .path
@@ -109,6 +125,61 @@ impl Drop for TempFile {
     fn drop(&mut self) {
         if let Some(path) = self.path.take() {
             let _ = fs::remove_file(path);
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::TempFile;
+    use std::fs;
+    use std::io::{Read, Seek, SeekFrom, Write};
+    use std::path::{Path, PathBuf};
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    #[test]
+    fn failed_rename_keeps_temp_file_available() {
+        let dir = TestDir::new();
+        let target = dir.path().join("target-dir");
+        fs::create_dir(&target).unwrap();
+
+        let mut temp = TempFile::in_dir("oddutils-test", dir.path()).unwrap();
+        temp.file_mut().write_all(b"content").unwrap();
+
+        let error = temp.rename_into_place(&target).unwrap_err();
+        assert!(error.kind() != std::io::ErrorKind::NotFound);
+
+        temp.file_mut().seek(SeekFrom::Start(0)).unwrap();
+        let mut contents = String::new();
+        temp.file_mut().read_to_string(&mut contents).unwrap();
+
+        assert_eq!(contents, "content");
+        assert!(temp.path().exists());
+    }
+
+    struct TestDir {
+        path: PathBuf,
+    }
+
+    impl TestDir {
+        fn new() -> Self {
+            let stamp = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos();
+            let path = std::env::temp_dir().join(format!("oddutils-core-test-{stamp}"));
+            fs::create_dir(&path).unwrap();
+            Self { path }
+        }
+
+        fn path(&self) -> &Path {
+            &self.path
+        }
+    }
+
+    impl Drop for TestDir {
+        fn drop(&mut self) {
+            let _ = fs::remove_dir_all(&self.path);
         }
     }
 }

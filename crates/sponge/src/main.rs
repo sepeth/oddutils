@@ -104,7 +104,12 @@ fn write_file(append: bool, input: &mut TempFile, output: PathBuf) -> io::Result
         io::copy(input.file_mut(), replacement.file_mut())?;
         replacement.file_mut().flush()?;
         set_mode(replacement.path(), metadata.mode)?;
-        replacement.persist(output)?;
+        if replacement.rename_into_place(&output).is_err() {
+            replacement.file_mut().seek(SeekFrom::Start(0))?;
+            let mut out = File::create(output)?;
+            io::copy(replacement.file_mut(), &mut out)?;
+            out.flush()?;
+        }
         Ok(())
     } else {
         let mut out = File::create(output)?;
