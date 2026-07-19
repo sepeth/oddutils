@@ -118,16 +118,21 @@ fn run(config: &Config) -> io::Result<u8> {
 
                 if !config.ignore_write_errors {
                     eprintln!("Write error to `{}`", children[index].label);
-                    kill_all(&mut children);
+                    close_and_wait(children)?;
                     return Ok(1);
                 }
                 if children.iter().all(|child| child.inactive) {
+                    close_and_wait(children)?;
                     return Ok(1);
                 }
             }
         }
     }
 
+    close_and_wait(children)
+}
+
+fn close_and_wait(mut children: Vec<PipeCommand>) -> io::Result<u8> {
     for child in &mut children {
         child.stdin.take();
     }
@@ -162,13 +167,6 @@ fn spawn_pipe(command: &OsString) -> io::Result<PipeCommand> {
         stdin: Some(stdin),
         inactive: false,
     })
-}
-
-fn kill_all(children: &mut [PipeCommand]) {
-    for child in children {
-        let _ = child.child.kill();
-        let _ = child.child.wait();
-    }
 }
 
 fn configure_sigpipe(ignore: bool) {
