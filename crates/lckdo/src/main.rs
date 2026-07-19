@@ -2,7 +2,8 @@ use std::env;
 use std::ffi::OsString;
 use std::fs::{File, OpenOptions};
 use std::io;
-use std::os::fd::AsRawFd;
+use std::os::fd::{AsRawFd, RawFd};
+use std::os::unix::process::CommandExt;
 use std::process::{Command, ExitCode, Stdio};
 use std::thread;
 use std::time::{Duration, Instant};
@@ -14,6 +15,9 @@ const EX_CANTCREAT: u8 = 73;
 const LOCK_SH: i32 = 1;
 const LOCK_EX: i32 = 2;
 const LOCK_NB: i32 = 4;
+const F_GETFD: i32 = 1;
+const F_SETFD: i32 = 2;
+const FD_CLOEXEC: i32 = 1;
 
 fn main() -> ExitCode {
     match Config::parse(env::args_os().skip(1)) {
@@ -41,6 +45,8 @@ fn main() -> ExitCode {
 struct Config {
     create: bool,
     quiet: bool,
+    direct_exec: bool,
+    keep_fd: Option<RawFd>,
     shared: bool,
     test: bool,
     wait: WaitMode,
@@ -65,6 +71,8 @@ impl Config {
     fn parse(mut args: impl Iterator<Item = OsString>) -> Result<Action, String> {
         let mut create = true;
         let mut quiet = false;
+        let mut direct_exec = false;
+        let mut keep_fd = None;
         let mut shared = false;
         let mut test = false;
         let mut wait = WaitMode::NoWait;
@@ -95,11 +103,19 @@ impl Config {
                     test = true;
                     create = false;
                 }
-                "-e" => {}
+                "-e" => direct_exec = true,
                 "-E" => {
-                    let _ = args
+                    let fd = args
                         .next()
-                        .ok_or_else(|| "-E requires a file descriptor".to_string())?;
+                        .ok_or_else(|| "-E requires a file descriptor".to_string())?
+                        .to_string_lossy()
+                        .parse::<RawFd>()
+                        .map_err(|_| "invalid file descriptor".to_string())?;
+                    if fd < 0 || fd == 2 {
+                        return Err("invalid file descriptor".to_string());
+                    }
+                    direct_exec = true;
+                    keep_fd = Some(fd);
                 }
                 value if value.starts_with('-') => return Err(format!("unknown option {value}")),
                 _ => {
@@ -117,6 +133,8 @@ impl Config {
         Ok(Action::Run(Self {
             create,
             quiet,
+            direct_exec,
+            keep_fd,
             shared,
             test,
             wait,
@@ -173,16 +191,39 @@ fn run(config: &Config) -> io::Result<u8> {
         return Ok(EX_TEMPFAIL);
     }
 
-    let status = Command::new(&config.command[0])
+    let mut command = Command::new(&config.command[0]);
+    command
         .args(&config.command[1..])
         .stdin(Stdio::inherit())
         .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit())
-        .status()?;
+        .stderr(Stdio::inherit());
+
+    if config.direct_exec {
+        prepare_direct_exec_lock_fd(&file, config.keep_fd)?;
+        return Err(command.exec());
+    }
+
+    let status = command.status()?;
     Ok(status
         .code()
         .and_then(|code| u8::try_from(code).ok())
         .unwrap_or(1))
+}
+
+fn prepare_direct_exec_lock_fd(file: &File, keep_fd: Option<RawFd>) -> io::Result<()> {
+    let fd = if let Some(keep_fd) = keep_fd {
+        dup2_call(file.as_raw_fd(), keep_fd)?;
+        keep_fd
+    } else {
+        file.as_raw_fd()
+    };
+    clear_cloexec(fd)
+}
+
+fn clear_cloexec(fd: RawFd) -> io::Result<()> {
+    let flags = fcntl_call(fd, F_GETFD, 0)?;
+    fcntl_call(fd, F_SETFD, flags & !FD_CLOEXEC)?;
+    Ok(())
 }
 
 fn open_lockfile(config: &Config) -> io::Result<Option<File>> {
@@ -236,6 +277,27 @@ fn flock_call(file: &File, operation: i32) -> io::Result<()> {
     }
 }
 
+fn dup2_call(old_fd: RawFd, new_fd: RawFd) -> io::Result<()> {
+    // SAFETY: `dup2` duplicates an open fd to the requested target fd.
+    let result = unsafe { dup2(old_fd, new_fd) };
+    if result >= 0 {
+        Ok(())
+    } else {
+        Err(io::Error::last_os_error())
+    }
+}
+
+fn fcntl_call(fd: RawFd, command: i32, argument: i32) -> io::Result<i32> {
+    // SAFETY: `fd` is expected to be open and the command/argument are the
+    // standard close-on-exec flag operations used above.
+    let result = unsafe { fcntl(fd, command, argument) };
+    if result >= 0 {
+        Ok(result)
+    } else {
+        Err(io::Error::last_os_error())
+    }
+}
+
 fn print_usage() {
     eprintln!("Usage: lckdo [options] lockfile program [arguments]");
     eprintln!("  -w       wait for lock");
@@ -249,4 +311,6 @@ fn print_usage() {
 
 unsafe extern "C" {
     fn flock(fd: i32, operation: i32) -> i32;
+    fn dup2(old_fd: i32, new_fd: i32) -> i32;
+    fn fcntl(fd: i32, command: i32, ...) -> i32;
 }

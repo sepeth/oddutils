@@ -41,6 +41,41 @@ fn returns_child_status() {
 }
 
 #[test]
+fn direct_exec_returns_command_status() {
+    let temp = TestDir::new();
+    let lock = temp.path().join("lock");
+
+    let output = Command::new(lckdo_bin())
+        .arg("-e")
+        .arg(&lock)
+        .arg("sh")
+        .arg("-c")
+        .arg("exit 6")
+        .output()
+        .unwrap();
+
+    assert_eq!(output.status.code(), Some(6));
+}
+
+#[test]
+fn direct_exec_keeps_requested_fd_open() {
+    let temp = TestDir::new();
+    let lock = temp.path().join("lock");
+
+    let output = Command::new(lckdo_bin())
+        .arg("-E")
+        .arg("9")
+        .arg(&lock)
+        .arg("sh")
+        .arg("-c")
+        .arg("test -e /dev/fd/9 || test -e /proc/self/fd/9")
+        .output()
+        .unwrap();
+
+    assert!(output.status.success(), "{output:?}");
+}
+
+#[test]
 fn test_mode_reports_unlocked_file() {
     let temp = TestDir::new();
     let lock = temp.path().join("lock");
