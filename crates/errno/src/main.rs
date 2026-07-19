@@ -1,9 +1,13 @@
 use std::env;
-use std::ffi::{CStr, OsString};
+use std::ffi::{CStr, CString, OsString};
 use std::os::raw::{c_char, c_int};
-use std::process::ExitCode;
+use std::process::{Command, ExitCode};
+
+const LC_ALL: c_int = 0;
 
 fn main() -> ExitCode {
+    let _ = set_locale("");
+
     match Config::parse(env::args_os().skip(1)) {
         Ok(Action::Help) => {
             print_usage();
@@ -106,10 +110,7 @@ fn run(config: &Config) -> bool {
             search(&config.args);
             true
         }
-        Mode::SearchAllLocales => {
-            eprintln!("errno: --search-all-locales is not implemented yet");
-            false
-        }
+        Mode::SearchAllLocales => search_all_locales(&config.args),
     }
 }
 
@@ -149,6 +150,26 @@ fn search(words: &[String]) {
     }
 }
 
+fn search_all_locales(words: &[String]) -> bool {
+    let output = match Command::new("locale").arg("-a").output() {
+        Ok(output) => output,
+        Err(error) => {
+            eprintln!("ERROR: Can't execute locale -a: {error}");
+            return false;
+        }
+    };
+    if !output.status.success() {
+        eprintln!("ERROR: locale -a failed");
+        return false;
+    }
+
+    for locale in String::from_utf8_lossy(&output.stdout).lines() {
+        let _ = set_locale(locale);
+        search(words);
+    }
+    true
+}
+
 fn report(errno: Errno) {
     println!("{} {} {}", errno.name, errno.code, description(errno.code));
 }
@@ -164,6 +185,15 @@ fn description(code: i32) -> String {
     unsafe { CStr::from_ptr(ptr) }
         .to_string_lossy()
         .into_owned()
+}
+
+fn set_locale(locale: &str) -> bool {
+    let Ok(locale) = CString::new(locale) else {
+        return false;
+    };
+    // SAFETY: `locale` is a NUL-terminated C string and this command is
+    // single-threaded while changing the process locale.
+    !unsafe { setlocale(LC_ALL, locale.as_ptr()) }.is_null()
 }
 
 fn by_name(name: &str) -> Option<Errno> {
@@ -616,4 +646,5 @@ const ERRNOS: &[Errno] = &[
 
 unsafe extern "C" {
     fn strerror(errnum: c_int) -> *mut c_char;
+    fn setlocale(category: c_int, locale: *const c_char) -> *mut c_char;
 }

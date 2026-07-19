@@ -47,6 +47,19 @@ fn search_matches_description_words() {
 }
 
 #[test]
+fn search_all_locales_runs_locale_search() {
+    let output = Command::new(errno_bin())
+        .arg("-S")
+        .arg("permission")
+        .output()
+        .unwrap();
+    let stderr = String::from_utf8_lossy(&output.stderr);
+
+    assert!(output.status.success(), "{output:?}");
+    assert!(!stderr.contains("not implemented"));
+}
+
+#[test]
 fn unknown_lookup_fails() {
     let output = Command::new(errno_bin()).arg("ENOPE").output().unwrap();
 
