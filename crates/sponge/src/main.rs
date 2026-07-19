@@ -1,12 +1,14 @@
 use std::env;
 use std::ffi::OsString;
-use std::fs::File;
+use std::fs::{File, OpenOptions};
 use std::io::{self, Seek, SeekFrom, Write};
+use std::os::unix::fs::{MetadataExt, OpenOptionsExt};
+use std::path::Path;
 use std::path::PathBuf;
 use std::process::ExitCode;
 
 use oddutils_core::temp::TempFile;
-use oddutils_core::unix::{output_metadata, set_mode};
+use oddutils_core::unix::{OutputMetadata, output_metadata, set_mode};
 
 fn main() -> ExitCode {
     match Config::parse(env::args_os().skip(1)) {
@@ -105,10 +107,7 @@ fn write_file(append: bool, input: &mut TempFile, output: PathBuf) -> io::Result
         replacement.file_mut().flush()?;
         set_mode(replacement.path(), metadata.mode)?;
         if replacement.rename_into_place(&output).is_err() {
-            replacement.file_mut().seek(SeekFrom::Start(0))?;
-            let mut out = File::create(output)?;
-            io::copy(replacement.file_mut(), &mut out)?;
-            out.flush()?;
+            copy_replacement_fallback(&mut replacement, &output, &metadata)?;
         }
         Ok(())
     } else {
@@ -121,7 +120,111 @@ fn write_file(append: bool, input: &mut TempFile, output: PathBuf) -> io::Result
     }
 }
 
+fn copy_replacement_fallback(
+    replacement: &mut TempFile,
+    output: &Path,
+    metadata: &OutputMetadata,
+) -> io::Result<()> {
+    replacement.file_mut().seek(SeekFrom::Start(0))?;
+    let mut out = fallback_output(output, metadata)?;
+    io::copy(replacement.file_mut(), &mut out)?;
+    out.flush()
+}
+
+fn fallback_output(output: &Path, metadata: &OutputMetadata) -> io::Result<File> {
+    if metadata.exists {
+        let out = OpenOptions::new().write(true).open(output)?;
+        ensure_same_file(&out, metadata)?;
+        out.set_len(0)?;
+        Ok(out)
+    } else {
+        OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .mode(metadata.mode)
+            .open(output)
+    }
+}
+
+fn ensure_same_file(file: &File, metadata: &OutputMetadata) -> io::Result<()> {
+    let current = file.metadata()?;
+    if Some(current.dev()) == metadata.device && Some(current.ino()) == metadata.inode {
+        Ok(())
+    } else {
+        Err(io::Error::other(
+            "output path changed before fallback copy, aborting",
+        ))
+    }
+}
+
 fn print_usage() {
     println!("sponge [-a] [file]");
     println!("  soak up standard input and write it to file, or stdout if no file is given");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{copy_replacement_fallback, output_metadata};
+    use oddutils_core::temp::TempFile;
+    use std::fs;
+    use std::io::Write;
+    use std::os::unix::fs::symlink;
+    use std::path::{Path, PathBuf};
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    #[test]
+    fn fallback_refuses_changed_output_path_before_truncating() {
+        let dir = TestDir::new();
+        let output = dir.path().join("output");
+        let target = dir.path().join("target");
+        fs::write(&output, "old").unwrap();
+        fs::write(&target, "keep").unwrap();
+        let metadata = output_metadata(&output).unwrap();
+
+        fs::remove_file(&output).unwrap();
+        symlink(&target, &output).unwrap();
+
+        let mut replacement = TempFile::in_dir("oddutils-sponge-test", dir.path()).unwrap();
+        replacement.file_mut().write_all(b"new").unwrap();
+
+        let error = copy_replacement_fallback(&mut replacement, &output, &metadata).unwrap_err();
+
+        assert!(error.to_string().contains("output path changed"));
+        assert_eq!(fs::read_to_string(target).unwrap(), "keep");
+    }
+
+    struct TestDir {
+        path: PathBuf,
+    }
+
+    impl TestDir {
+        fn new() -> Self {
+            let stamp = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos();
+
+            for attempt in 0..1000_u32 {
+                let path = std::env::temp_dir().join(format!(
+                    "oddutils-sponge-unit-{}-{stamp}-{attempt}",
+                    std::process::id()
+                ));
+                if fs::create_dir(&path).is_ok() {
+                    return Self { path };
+                }
+            }
+
+            panic!("could not create test directory");
+        }
+
+        fn path(&self) -> &Path {
+            &self.path
+        }
+    }
+
+    impl Drop for TestDir {
+        fn drop(&mut self) {
+            let _ = fs::remove_dir_all(&self.path);
+        }
+    }
 }

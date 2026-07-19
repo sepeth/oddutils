@@ -2,7 +2,7 @@
 
 use std::fs;
 use std::io;
-use std::os::unix::fs::PermissionsExt;
+use std::os::unix::fs::{MetadataExt, PermissionsExt};
 use std::path::Path;
 
 unsafe extern "C" {
@@ -15,6 +15,8 @@ pub struct OutputMetadata {
     pub exists: bool,
     pub regular_file: bool,
     pub mode: u32,
+    pub device: Option<u64>,
+    pub inode: Option<u64>,
 }
 
 /// Inspect an output path without following symlinks.
@@ -31,12 +33,16 @@ pub fn output_metadata(path: &Path) -> io::Result<OutputMetadata> {
                 exists: true,
                 regular_file: file_type.is_file() && !file_type.is_symlink(),
                 mode: metadata.permissions().mode() & 0o7777,
+                device: Some(metadata.dev()),
+                inode: Some(metadata.ino()),
             })
         }
         Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(OutputMetadata {
             exists: false,
             regular_file: false,
             mode: default_file_mode(),
+            device: None,
+            inode: None,
         }),
         Err(error) => Err(error),
     }
