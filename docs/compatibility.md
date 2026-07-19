@@ -181,3 +181,20 @@ Known difference:
 
 - decompression currently runs sequentially rather than forking all
   preprocessors in parallel.
+
+## ifdata
+
+Implemented behavior:
+
+- `ifdata -e iface`
+- `ifdata -pe iface`
+- `ifdata -p iface`
+- `ifdata -pa/-pn/-pN/-pb/-pm iface`
+- supports multiple print options and emits one line per option
+
+Known gaps:
+
+- Linux-only hardware-address, flag, and statistics options are not implemented
+  yet.
+- this implementation shells out to `ifconfig` instead of using ioctl calls
+  directly.

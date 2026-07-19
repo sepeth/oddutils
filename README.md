@@ -35,7 +35,7 @@ packaged like normal Unix tools while still sharing common code.
 | `vipe` | Initial implementation | Insert an editor into a pipe. |
 | `combine` | Initial implementation | Combine line sets with boolean operations. |
 | `zrun` | Initial implementation | Run commands over compressed arguments. |
-| `ifdata` | Planned | Read network interface information. |
+| `ifdata` | Initial implementation | Read core network interface information. |
 | `lckdo` | Planned | Deprecated upstream; likely lowest priority. |
 | `parallel` | Planned | Lower priority because GNU parallel commonly owns the name. |
 

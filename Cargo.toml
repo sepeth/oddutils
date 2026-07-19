@@ -4,6 +4,7 @@ members = [
     "crates/chronic",
     "crates/combine",
     "crates/errno",
+    "crates/ifdata",
     "crates/ifne",
     "crates/isutf8",
     "crates/mispipe",
