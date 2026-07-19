@@ -47,3 +47,15 @@ Implemented behavior:
 - preserves ordinary nonzero child exit codes
 - `-e` replays stderr and exits `2` when the child succeeds but writes stderr
 - `-v` prints `STDOUT`, `STDERR`, and `RETVAL` labels around replayed output
+
+## ifne
+
+Implemented behavior:
+
+- `ifne [-n] command [args]`
+- exits successfully without running the command when stdin is empty
+- runs the command with stdin forwarded when stdin is not empty
+- with `-n`, runs the command only when stdin is empty
+- with `-n` and nonempty stdin, writes stdin back to stdout without running the
+  command
+- returns the child exit status for ordinary child exits
