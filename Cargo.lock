@@ -39,6 +39,10 @@ name = "oddutils-mispipe"
 version = "0.1.0"
 
 [[package]]
+name = "oddutils-parallel"
+version = "0.1.0"
+
+[[package]]
 name = "oddutils-pee"
 version = "0.1.0"
 

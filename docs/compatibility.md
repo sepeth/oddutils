@@ -213,3 +213,19 @@ Known gap:
 
 - direct `exec` behavior for `-e`/`-E` is accepted but not faithfully
   implemented; commands are still spawned and waited for.
+
+## parallel
+
+Implemented behavior:
+
+- `parallel [OPTIONS] command -- arguments`
+- `parallel [OPTIONS] -- commands`
+- supports `-j maxjobs`, `-i`, and `-n args`
+- runs raw commands through the shell in `parallel -- command...` mode
+- ORs child exit statuses for its own exit status
+
+Known gaps:
+
+- `-l maxload` is parsed but not enforced yet.
+- stdout/stderr are captured per job and replayed when each job finishes rather
+  than streamed through live serialization pipes.

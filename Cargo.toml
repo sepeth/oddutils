@@ -9,6 +9,7 @@ members = [
     "crates/isutf8",
     "crates/lckdo",
     "crates/mispipe",
+    "crates/parallel",
     "crates/pee",
     "crates/sponge",
     "crates/ts",
