@@ -55,5 +55,30 @@ cargo clippy --all-targets --all-features
 cargo fmt --check
 ```
 
+Generate manpages:
+
+```sh
+just man
+```
+
+Install to `/usr/local` by default:
+
+```sh
+just install
+```
+
+Override the install prefix or package into a staging root:
+
+```sh
+PREFIX="$HOME/.local" just install
+DESTDIR=/tmp/pkgroot PREFIX=/usr/local just install
+```
+
+For a user-local `~/.Bin` binary install without manpages:
+
+```sh
+just install-user
+```
+
 The upstream `moreutils` checkout is expected beside this repository at
 `../moreutils` for reference and future compatibility comparisons.

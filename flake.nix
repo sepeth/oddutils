@@ -20,6 +20,7 @@
             just
             rustc
             rustfmt
+            scdoc
           ];
         };
       });
