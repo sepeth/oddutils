@@ -55,6 +55,15 @@ cargo clippy --all-targets --all-features
 cargo fmt --check
 ```
 
+Run available upstream moreutils compatibility tests:
+
+```sh
+just check-moreutils
+```
+
+The upstream checkout currently provides a reusable test script for `isutf8`;
+other utilities are covered by oddutils' Rust tests and compatibility notes.
+
 Generate manpages:
 
 ```sh
