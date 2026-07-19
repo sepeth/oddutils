@@ -31,7 +31,7 @@ packaged like normal Unix tools while still sharing common code.
 | `mispipe` | Initial implementation | Pipe two commands, returning the first status. |
 | `isutf8` | Initial implementation | Check input for valid UTF-8. |
 | `errno` | Initial implementation | Look up errno names and descriptions. |
-| `vidir` | Planned | Edit directory entries in `$EDITOR`. |
+| `vidir` | Initial implementation | Edit directory entries in `$EDITOR`. |
 | `vipe` | Initial implementation | Insert an editor into a pipe. |
 | `combine` | Planned | Combine line sets with boolean operations. |
 | `zrun` | Planned | Run commands over compressed arguments. |

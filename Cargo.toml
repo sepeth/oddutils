@@ -9,6 +9,7 @@ members = [
     "crates/pee",
     "crates/sponge",
     "crates/ts",
+    "crates/vidir",
     "crates/vipe",
 ]
 resolver = "3"

@@ -130,3 +130,23 @@ Known difference:
 
 - this implementation does not yet reopen stdin/stdout on `/dev/tty` while the
   editor runs.
+
+## vidir
+
+Implemented behavior:
+
+- `vidir [--verbose] [directory|file|-]...`
+- defaults to editing the current directory
+- expands directory arguments to their direct children
+- reads newline-delimited paths from stdin for `-`
+- writes numbered edit lines to a temporary file and runs `$VISUAL`, then
+  `$EDITOR`, then `vi`
+- renames changed paths and removes paths whose lines were deleted
+- creates parent directories for edited target paths
+
+Known differences:
+
+- swap/conflict handling is simpler than upstream and needs broader
+  compatibility tests.
+- this implementation does not reopen stdin from `/dev/tty` after reading a
+  `-` path list.

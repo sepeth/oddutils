@@ -42,5 +42,9 @@ name = "oddutils-ts"
 version = "0.1.0"
 
 [[package]]
+name = "oddutils-vidir"
+version = "0.1.0"
+
+[[package]]
 name = "oddutils-vipe"
 version = "0.1.0"
