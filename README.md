@@ -27,7 +27,7 @@ packaged like normal Unix tools while still sharing common code.
 | `ts` | Initial implementation | Timestamp standard input; `-r` is not implemented yet. |
 | `chronic` | Initial implementation | Run a command quietly unless it fails. |
 | `ifne` | Initial implementation | Run a command if standard input is not empty. |
-| `pee` | Planned | Tee standard input to pipes. |
+| `pee` | Initial implementation | Tee standard input to pipes. |
 | `mispipe` | Planned | Pipe two commands, returning the first status. |
 | `isutf8` | Planned | Check input for valid UTF-8. |
 | `errno` | Planned | Look up errno names and descriptions. |

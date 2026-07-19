@@ -3,6 +3,7 @@ members = [
     "crates/oddutils-core",
     "crates/chronic",
     "crates/ifne",
+    "crates/pee",
     "crates/sponge",
     "crates/ts",
 ]

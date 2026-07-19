@@ -59,3 +59,15 @@ Implemented behavior:
 - with `-n` and nonempty stdin, writes stdin back to stdout without running the
   command
 - returns the child exit status for ordinary child exits
+
+## pee
+
+Implemented behavior:
+
+- `pee [--[no-]ignore-sigpipe] [--[no-]ignore-write-errors] [command ...]`
+- runs each command through the shell and writes a copy of stdin to each
+  command
+- does not copy stdin to stdout by itself
+- child stdout and stderr are inherited by `pee`
+- defaults to ignoring SIGPIPE and write errors
+- returns the bitwise OR of child exit statuses
