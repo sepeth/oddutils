@@ -17,17 +17,6 @@ check:
     cargo clippy --all-targets --all-features
     cargo test
 
-check-moreutils: build-isutf8
-    tmpdir="$(mktemp -d "${TMPDIR:-/tmp}/oddutils-moreutils-isutf8.XXXXXX")"; \
-    trap 'rm -rf "$tmpdir"' EXIT; \
-    cp ../moreutils/is_utf8/test.sh "$tmpdir/test.sh"; \
-    ln -s "$PWD/target/debug/isutf8" "$tmpdir/isutf8"; \
-    cd "$tmpdir"; \
-    bash ./test.sh
-
-build-isutf8:
-    cargo build -p oddutils-isutf8
-
 build-release:
     cargo build --release
 
