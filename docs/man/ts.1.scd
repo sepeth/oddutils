@@ -30,7 +30,11 @@ forms add microsecond resolution.
 	Use a monotonic clock as the source for absolute timestamps.
 
 *-r*
-	Reserved for relative timestamp conversion. This mode is not implemented yet.
+	Convert recognized timestamps in input lines to relative durations. When
+	_format_ is supplied, recognized timestamps are reformatted with strftime
+	instead. Supported inputs include ISO timestamps such as
+	2026-07-20T18:31:19Z, syslog timestamps such as Jul 20 18:31:19, and
+	day-month-year timestamps such as 20 Jul 2026 18:31:19.
 
 # EXIT STATUS
 

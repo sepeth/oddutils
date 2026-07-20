@@ -3,7 +3,11 @@ use std::ffi::{CStr, CString, OsString};
 use std::io::{self, BufRead, Write};
 use std::os::raw::c_char;
 use std::process::ExitCode;
+use std::sync::OnceLock;
 use std::time::Instant;
+
+use chrono::{DateTime, Datelike, Local, LocalResult, NaiveDateTime, TimeZone};
+use regex::{Captures, Regex};
 
 fn main() -> ExitCode {
     match Config::parse(env::args_os().skip(1)) {
@@ -31,6 +35,8 @@ struct Config {
     mode: Mode,
     format: String,
     monotonic: bool,
+    relative: bool,
+    use_format: bool,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -86,10 +92,7 @@ impl Config {
             }
         }
 
-        if relative {
-            return Err("-r timestamp conversion is not implemented yet".to_string());
-        }
-
+        let use_format = format.is_some();
         let format = format.unwrap_or_else(|| match mode {
             Mode::Absolute => "%b %d %H:%M:%S".to_string(),
             Mode::Incremental | Mode::SinceStart => "%H:%M:%S".to_string(),
@@ -99,11 +102,17 @@ impl Config {
             mode,
             format,
             monotonic,
+            relative,
+            use_format,
         }))
     }
 }
 
 fn run(config: &Config) -> io::Result<()> {
+    if config.relative {
+        return run_relative(config);
+    }
+
     let stdin = io::stdin();
     let mut input = stdin.lock();
     let stdout = io::stdout();
@@ -118,6 +127,23 @@ fn run(config: &Config) -> io::Result<()> {
         output.write_all(&line)?;
         output.flush()?;
         line.clear();
+    }
+
+    output.flush()
+}
+
+fn run_relative(config: &Config) -> io::Result<()> {
+    let stdin = io::stdin();
+    let input = stdin.lock();
+    let stdout = io::stdout();
+    let mut output = stdout.lock();
+    let now = Local::now();
+
+    for line in input.lines() {
+        let line = line?;
+        let converted = relative_timestamps(&line, config, now);
+        writeln!(output, "{converted}")?;
+        output.flush()?;
     }
 
     output.flush()
@@ -157,6 +183,127 @@ impl Clock {
         let utc = matches!(config.mode, Mode::Incremental | Mode::SinceStart);
         format_time(&config.format, stamp, utc)
     }
+}
+
+fn relative_timestamps(line: &str, config: &Config, now: DateTime<Local>) -> String {
+    timestamp_regex()
+        .replace_all(line, |captures: &Captures<'_>| {
+            let timestamp = captures
+                .name("timestamp")
+                .map_or("", |matched| matched.as_str());
+            parse_timestamp(timestamp).map_or_else(
+                || timestamp.to_string(),
+                |parsed| {
+                    if config.use_format {
+                        format_time(&config.format, UnixTime::from_datetime(parsed), false)
+                            .unwrap_or_else(|_| timestamp.to_string())
+                    } else {
+                        concise_duration(now.timestamp() - parsed.timestamp())
+                    }
+                },
+            )
+        })
+        .into_owned()
+}
+
+fn timestamp_regex() -> &'static Regex {
+    static REGEX: OnceLock<Regex> = OnceLock::new();
+    REGEX.get_or_init(|| {
+        Regex::new(
+            r"(?x)
+            \b(?P<timestamp>
+                \d{4}[-:]\d{2}[-:]\d{2}[T ]\d{2}:\d{2}:\d{2}
+                    (?:\.\d+)?
+                    (?:Z|[+-]\d{2}:?\d{2})?
+              |
+                (?i:[a-z]{3})\s+\d{1,2}\s+\d{2}:\d{2}:\d{2}
+              |
+                \d{1,2}\s+(?i:[a-z]{3})\s+\d{2,4}\s+\d{2}:\d{2}:\d{2}
+                    (?:\s+(?i:[a-z]{2,4})|\s+[+-]\d{4})?
+            )\b",
+        )
+        .expect("timestamp regex is valid")
+    })
+}
+
+fn parse_timestamp(timestamp: &str) -> Option<DateTime<Local>> {
+    parse_iso_timestamp(timestamp)
+        .or_else(|| parse_syslog_timestamp(timestamp))
+        .or_else(|| parse_dated_timestamp(timestamp))
+}
+
+fn parse_iso_timestamp(timestamp: &str) -> Option<DateTime<Local>> {
+    let mut normalized = timestamp.to_string();
+    if normalized.as_bytes().get(4) == Some(&b':') && normalized.as_bytes().get(7) == Some(&b':') {
+        normalized.replace_range(4..5, "-");
+        normalized.replace_range(7..8, "-");
+    }
+
+    DateTime::parse_from_rfc3339(&normalized)
+        .map(|parsed| parsed.with_timezone(&Local))
+        .ok()
+        .or_else(|| {
+            DateTime::parse_from_str(&normalized, "%Y-%m-%dT%H:%M:%S%.f%z")
+                .map(|parsed| parsed.with_timezone(&Local))
+                .ok()
+        })
+        .or_else(|| local_datetime(&normalized, "%Y-%m-%dT%H:%M:%S%.f"))
+        .or_else(|| local_datetime(&normalized, "%Y-%m-%d %H:%M:%S%.f"))
+}
+
+fn parse_syslog_timestamp(timestamp: &str) -> Option<DateTime<Local>> {
+    let with_year = format!("{} {timestamp}", Local::now().year());
+    local_datetime(&with_year, "%Y %b %e %H:%M:%S")
+}
+
+fn parse_dated_timestamp(timestamp: &str) -> Option<DateTime<Local>> {
+    local_datetime(timestamp, "%e %b %Y %H:%M:%S")
+        .or_else(|| local_datetime(timestamp, "%e %b %y %H:%M:%S"))
+        .or_else(|| local_datetime(timestamp, "%a, %e %b %Y %H:%M:%S"))
+        .or_else(|| local_datetime(timestamp, "%a %e %b %Y %H:%M:%S"))
+}
+
+fn local_datetime(text: &str, format: &str) -> Option<DateTime<Local>> {
+    let parsed = NaiveDateTime::parse_from_str(text, format).ok()?;
+    match Local.from_local_datetime(&parsed) {
+        LocalResult::Single(time) => Some(time),
+        LocalResult::Ambiguous(earlier, _) => Some(earlier),
+        LocalResult::None => None,
+    }
+}
+
+fn concise_duration(seconds: i64) -> String {
+    let suffix = if seconds < 0 { "from now" } else { "ago" };
+    let mut remaining = seconds.unsigned_abs();
+    if remaining == 0 {
+        return "now".to_string();
+    }
+
+    let units = [
+        ("year", 365 * 24 * 60 * 60),
+        ("week", 7 * 24 * 60 * 60),
+        ("day", 24 * 60 * 60),
+        ("hour", 60 * 60),
+        ("minute", 60),
+        ("second", 1),
+    ];
+    let mut parts = Vec::new();
+    for (name, unit_seconds) in units {
+        let count = remaining / unit_seconds;
+        if count == 0 {
+            continue;
+        }
+        parts.push(format!(
+            "{count} {name}{}",
+            if count == 1 { "" } else { "s" }
+        ));
+        remaining %= unit_seconds;
+        if parts.len() == 2 {
+            break;
+        }
+    }
+
+    format!("{} {suffix}", parts.join(" and "))
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -201,6 +348,13 @@ impl UnixTime {
         Self {
             seconds,
             microseconds,
+        }
+    }
+
+    fn from_datetime(datetime: DateTime<Local>) -> Self {
+        Self {
+            seconds: datetime.timestamp(),
+            microseconds: datetime.timestamp_subsec_micros(),
         }
     }
 }

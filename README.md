@@ -29,7 +29,7 @@ See `COPYING`.
 | Utility | Status | Notes |
 | --- | --- | --- |
 | `sponge` | Initial implementation | Reads all input before writing the output file; supports `-a`. |
-| `ts` | Initial implementation | Timestamp standard input; `-r` is not implemented yet. |
+| `ts` | Initial implementation | Timestamp standard input; `-r` supports common ISO, syslog, and mail-style timestamps. |
 | `chronic` | Initial implementation | Run a command quietly unless it fails. |
 | `ifne` | Initial implementation | Run a command if standard input is not empty. |
 | `pee` | Initial implementation | Tee standard input to pipes. |

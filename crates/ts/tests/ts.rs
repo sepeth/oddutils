@@ -39,11 +39,34 @@ fn writes_since_start_with_utc_default_shape() {
 }
 
 #[test]
-fn rejects_relative_mode_until_date_parser_exists() {
-    let output = Command::new(ts_bin()).arg("-r").output().unwrap();
+fn relative_mode_reformats_iso_without_fractional_seconds() {
+    let output = run_ts(
+        &["-r", "%Y"],
+        b"2026-07-20T18:31:19Z first event\n2026-07-20T18:34:49Z second event\n",
+    );
 
-    assert!(!output.status.success());
-    assert!(String::from_utf8_lossy(&output.stderr).contains("not implemented yet"));
+    assert_eq!(output.stdout, b"2026 first event\n2026 second event\n");
+}
+
+#[test]
+fn relative_mode_reformats_moreutils_fractional_iso() {
+    let output = run_ts(
+        &["-r", "%Y-%m-%d %H:%M:%S"],
+        b"2026-07-20T18:31:19.000Z first event\n",
+    );
+    let text = String::from_utf8(output.stdout).unwrap();
+
+    assert!(text.ends_with(" first event\n"));
+    assert!(text.starts_with("2026-07-20 "));
+}
+
+#[test]
+fn relative_mode_describes_old_timestamp() {
+    let output = run_ts(&["-r"], b"1970-01-01T00:00:00Z old event\n");
+    let text = String::from_utf8(output.stdout).unwrap();
+
+    assert!(text.contains("ago old event\n"));
+    assert!(!text.contains("1970-01-01"));
 }
 
 fn run_ts(args: &[&str], stdin: &[u8]) -> std::process::Output {

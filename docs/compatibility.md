@@ -34,9 +34,10 @@ Implemented behavior:
 
 Known gap:
 
-- `-r` timestamp conversion is not implemented yet. Upstream uses Perl
-  `Date::Parse` and `Time::Duration`; oddutils needs a deliberate Rust date
-  parsing strategy before enabling this mode.
+- `-r` timestamp conversion is implemented with a Rust parser for common ISO,
+  syslog, and mail-style timestamps. This intentionally is not a byte-for-byte
+  clone of Perl `Date::Parse`; oddutils also recognizes ISO timestamps without
+  fractional seconds, such as `2026-07-20T18:31:19Z`.
 
 ## chronic
 

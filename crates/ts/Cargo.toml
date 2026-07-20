@@ -5,7 +5,9 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
+chrono = { version = "0.4", default-features = false, features = ["clock"] }
 libc = "0.2"
+regex = "1"
 
 [[bin]]
 name = "ts"
