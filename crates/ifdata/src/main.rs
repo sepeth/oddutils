@@ -290,7 +290,17 @@ fn interface_mtu(iface: &CStr) -> Option<u32> {
 
 #[cfg(any(target_os = "freebsd", target_os = "ios", target_os = "macos"))]
 const fn siocgifmtu() -> libc::c_ulong {
-    3_223_349_555
+    bsd_iowr(b'i', 51, std::mem::size_of::<libc::ifreq>())
+}
+
+#[cfg(any(target_os = "freebsd", target_os = "ios", target_os = "macos"))]
+const fn bsd_iowr(group: u8, number: u8, len: usize) -> libc::c_ulong {
+    const IOC_INOUT: libc::c_ulong = 0xc000_0000;
+
+    IOC_INOUT
+        | ((len as libc::c_ulong) << 16)
+        | ((group as libc::c_ulong) << 8)
+        | number as libc::c_ulong
 }
 
 #[cfg(any(target_os = "android", target_os = "linux", target_os = "netbsd"))]
