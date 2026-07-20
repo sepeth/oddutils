@@ -320,6 +320,14 @@ fn interface_mtu(_iface: &CStr) -> Option<u32> {
     None
 }
 
+#[cfg(any(
+    target_os = "android",
+    target_os = "freebsd",
+    target_os = "ios",
+    target_os = "linux",
+    target_os = "macos",
+    target_os = "netbsd"
+))]
 #[allow(
     clippy::cast_possible_wrap,
     reason = "libc::c_char signedness is target-specific; preserve interface-name bytes"
