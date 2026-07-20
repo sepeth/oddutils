@@ -288,12 +288,22 @@ fn interface_mtu(iface: &CStr) -> Option<u32> {
     }
 }
 
-#[cfg(any(target_os = "freebsd", target_os = "ios", target_os = "macos"))]
+#[cfg(any(
+    target_os = "freebsd",
+    target_os = "ios",
+    target_os = "macos",
+    target_os = "netbsd"
+))]
 const fn siocgifmtu() -> libc::c_ulong {
     bsd_iowr(b'i', 51, std::mem::size_of::<libc::ifreq>())
 }
 
-#[cfg(any(target_os = "freebsd", target_os = "ios", target_os = "macos"))]
+#[cfg(any(
+    target_os = "freebsd",
+    target_os = "ios",
+    target_os = "macos",
+    target_os = "netbsd"
+))]
 const fn bsd_iowr(group: u8, number: u8, len: usize) -> libc::c_ulong {
     const IOC_INOUT: libc::c_ulong = 0xc000_0000;
 
@@ -303,7 +313,7 @@ const fn bsd_iowr(group: u8, number: u8, len: usize) -> libc::c_ulong {
         | number as libc::c_ulong
 }
 
-#[cfg(any(target_os = "android", target_os = "linux", target_os = "netbsd"))]
+#[cfg(any(target_os = "android", target_os = "linux"))]
 const fn siocgifmtu() -> libc::c_ulong {
     libc::SIOCGIFMTU
 }
