@@ -211,32 +211,50 @@ fn timestamp_regex() -> &'static Regex {
     REGEX.get_or_init(|| {
         Regex::new(
             r"(?x)
+            # Match one complete timestamp candidate and expose it to the replacer.
             \b(?P<timestamp>
                 # RFC 2822-style dates, e.g. Wed, 02 Jun 2021 06:31:39 GMT.
+                # Weekday, day, month name, and year.
                 (?i:[a-z]{3}),\s+\d{1,2}\s+(?i:[a-z]{3,9})\.?\s+\d{2,4}
+                    # Time of day with optional seconds and fractional seconds.
                     \s+\d{1,2}:\d{2}(?::\d{2}(?:\.\d+)?)?
+                    # Optional timezone abbreviation or numeric offset.
                     (?:\s+(?i:[a-z]{2,4})|\s+[+-]\d{2}:?\d{2})?
               |
                 # ISO-like numeric dates, including RFC 3339 timestamps.
+                # Year, month, and day separated by hyphen, colon, or slash.
                 \d{4}[-:/]\d{1,2}[-:/]\d{1,2}
+                    # Optional time of day after T or a space.
                     (?:[T ]\d{1,2}:\d{2}(?::\d{2}(?:\.\d+)?)?
+                    # Optional UTC marker or numeric timezone offset.
                     (?:\s*(?:Z|(?i:UTC|GMT)|[+-]\d{2}:?\d{2}))?)?
               |
                 # Month-first dates, e.g. Jul 20 18:31:19 or July 20, 2026.
+                # Month name and day, with an optional trailing comma.
                 (?i:[a-z]{3,9})\.?\s+\d{1,2},?
+                    # Optional year.
                     (?:\s+\d{2,4})?
+                    # Optional time, allowing at before the clock value.
                     (?:\s+(?:at\s+)?\d{1,2}:\d{2}(?::\d{2}(?:\.\d+)?)?
+                    # Optional AM/PM marker.
                     (?:\s*(?i:AM|PM))?
+                    # Optional timezone abbreviation or numeric offset.
                     (?:\s+(?i:[a-z]{2,4})|\s+[+-]\d{2}:?\d{2})?)?
               |
                 # Day-first named-month dates, e.g. 20 Jul 2026 18:31:19.
+                # Day, month name, and year, with an optional trailing comma.
                 \d{1,2}\s+(?i:[a-z]{3,9})\.?\s+\d{2,4},?
+                    # Optional time of day with optional timezone.
                     (?:\s+\d{1,2}:\d{2}(?::\d{2}(?:\.\d+)?)?
+                    # Optional timezone abbreviation or numeric offset.
                     (?:\s+(?i:[a-z]{2,4})|\s+[+-]\d{2}:?\d{2})?)?
               |
                 # Slash or dotted numeric dates, e.g. 07/20/2026 6:31 PM.
+                # Month/day/year or day/month/year candidate for dateparser.
                 \d{1,2}[/.]\d{1,2}[/.]\d{2,4}
+                    # Optional time of day.
                     (?:\s+\d{1,2}:\d{2}(?::\d{2}(?:\.\d+)?)?
+                    # Optional AM/PM marker.
                     (?:\s*(?i:AM|PM))?)?
             )\b",
         )
