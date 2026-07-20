@@ -315,11 +315,15 @@ fn interface_mtu(_iface: &CStr) -> Option<u32> {
     None
 }
 
+#[allow(
+    clippy::cast_possible_wrap,
+    reason = "libc::c_char signedness is target-specific; preserve interface-name bytes"
+)]
 fn copy_interface_name(dest: &mut [libc::c_char], iface: &CStr) {
     let bytes = iface.to_bytes();
     let len = bytes.len().min(dest.len().saturating_sub(1));
     for (slot, byte) in dest.iter_mut().zip(bytes.iter().copied()).take(len) {
-        *slot = byte.cast_signed();
+        *slot = byte as libc::c_char;
     }
 }
 

@@ -66,6 +66,17 @@ Generate manpages:
 just man
 ```
 
+Build and test in a Linux container:
+
+```sh
+just container-test
+just container-image
+docker run --rm oddutils ts --help
+```
+
+The final image installs binaries and manpages under `/usr/local`.
+Set `CONTAINER_RUNTIME=podman` to use Podman instead of Docker.
+
 Install to `/usr/local` by default:
 
 ```sh

@@ -7,6 +7,7 @@ man1dir := mandir + "/man1"
 user-prefix := env_var_or_default("USER_PREFIX", env_var("HOME") + "/.local")
 user-bindir := user-prefix + "/bin"
 user-man1dir := user-prefix + "/share/man/man1"
+container-runtime := env_var_or_default("CONTAINER_RUNTIME", "docker")
 bins := "chronic combine errno ifdata ifne isutf8 lckdo mispipe parallel pee sponge ts vidir vipe zrun"
 
 test:
@@ -19,6 +20,15 @@ check:
 
 build-release:
     cargo build --release
+
+container-build:
+    {{container-runtime}} build --target build -t oddutils-build .
+
+container-test: container-build
+    {{container-runtime}} run --rm oddutils-build cargo test
+
+container-image:
+    {{container-runtime}} build -t oddutils .
 
 man:
     mkdir -p target/man/man1

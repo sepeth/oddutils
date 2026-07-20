@@ -5,11 +5,21 @@ fn ifdata_bin() -> PathBuf {
     PathBuf::from(env!("CARGO_BIN_EXE_ifdata"))
 }
 
+#[cfg(target_os = "linux")]
+fn loopback_interface() -> &'static str {
+    "lo"
+}
+
+#[cfg(not(target_os = "linux"))]
+fn loopback_interface() -> &'static str {
+    "lo0"
+}
+
 #[test]
 fn reports_loopback_exists() {
     let output = Command::new(ifdata_bin())
         .arg("-pe")
-        .arg("lo0")
+        .arg(loopback_interface())
         .output()
         .unwrap();
 
@@ -33,7 +43,7 @@ fn prints_loopback_address_and_mtu() {
     let output = Command::new(ifdata_bin())
         .arg("-pa")
         .arg("-pm")
-        .arg("lo0")
+        .arg(loopback_interface())
         .output()
         .unwrap();
     let stdout = String::from_utf8(output.stdout).unwrap();
