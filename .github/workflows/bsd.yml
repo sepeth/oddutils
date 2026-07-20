@@ -41,3 +41,23 @@ jobs:
           run: |
             cargo test
             cargo build --release
+
+  netbsd:
+    name: NetBSD
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Test on NetBSD
+        uses: vmactions/netbsd-vm@v1
+        with:
+          release: "10.1"
+          usesh: true
+          prepare: |
+            export PATH="/usr/pkg/sbin:/usr/pkg/bin:$PATH"
+            pkgin update
+            pkgin -y install rust scdoc
+          run: |
+            export PATH="/usr/pkg/sbin:/usr/pkg/bin:$PATH"
+            cargo test
+            cargo build --release
