@@ -288,17 +288,12 @@ fn interface_mtu(iface: &CStr) -> Option<u32> {
     }
 }
 
-#[cfg(any(target_os = "ios", target_os = "macos"))]
+#[cfg(any(target_os = "freebsd", target_os = "ios", target_os = "macos"))]
 const fn siocgifmtu() -> libc::c_ulong {
     3_223_349_555
 }
 
-#[cfg(any(
-    target_os = "android",
-    target_os = "freebsd",
-    target_os = "linux",
-    target_os = "netbsd"
-))]
+#[cfg(any(target_os = "android", target_os = "linux", target_os = "netbsd"))]
 const fn siocgifmtu() -> libc::c_ulong {
     libc::SIOCGIFMTU
 }
