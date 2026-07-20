@@ -220,8 +220,9 @@ fn apply_edit_file(
             }
         }
 
-        if let Some(parent) = new_path.parent()
-            && !parent.as_os_str().is_empty()
+        if let Some(parent) = new_path
+            .parent()
+            .filter(|path| !path.as_os_str().is_empty())
         {
             fs::create_dir_all(parent)?;
         }
