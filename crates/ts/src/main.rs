@@ -212,24 +212,29 @@ fn timestamp_regex() -> &'static Regex {
         Regex::new(
             r"(?x)
             \b(?P<timestamp>
+                # RFC 2822-style dates, e.g. Wed, 02 Jun 2021 06:31:39 GMT.
                 (?i:[a-z]{3}),\s+\d{1,2}\s+(?i:[a-z]{3,9})\.?\s+\d{2,4}
                     \s+\d{1,2}:\d{2}(?::\d{2}(?:\.\d+)?)?
                     (?:\s+(?i:[a-z]{2,4})|\s+[+-]\d{2}:?\d{2})?
               |
+                # ISO-like numeric dates, including RFC 3339 timestamps.
                 \d{4}[-:/]\d{1,2}[-:/]\d{1,2}
                     (?:[T ]\d{1,2}:\d{2}(?::\d{2}(?:\.\d+)?)?
                     (?:\s*(?:Z|(?i:UTC|GMT)|[+-]\d{2}:?\d{2}))?)?
               |
+                # Month-first dates, e.g. Jul 20 18:31:19 or July 20, 2026.
                 (?i:[a-z]{3,9})\.?\s+\d{1,2},?
                     (?:\s+\d{2,4})?
                     (?:\s+(?:at\s+)?\d{1,2}:\d{2}(?::\d{2}(?:\.\d+)?)?
                     (?:\s*(?i:AM|PM))?
                     (?:\s+(?i:[a-z]{2,4})|\s+[+-]\d{2}:?\d{2})?)?
               |
+                # Day-first named-month dates, e.g. 20 Jul 2026 18:31:19.
                 \d{1,2}\s+(?i:[a-z]{3,9})\.?\s+\d{2,4},?
                     (?:\s+\d{1,2}:\d{2}(?::\d{2}(?:\.\d+)?)?
                     (?:\s+(?i:[a-z]{2,4})|\s+[+-]\d{2}:?\d{2})?)?
               |
+                # Slash or dotted numeric dates, e.g. 07/20/2026 6:31 PM.
                 \d{1,2}[/.]\d{1,2}[/.]\d{2,4}
                     (?:\s+\d{1,2}:\d{2}(?::\d{2}(?:\.\d+)?)?
                     (?:\s*(?i:AM|PM))?)?
