@@ -1,7 +1,7 @@
 use std::env;
 use std::ffi::{CStr, CString, OsString};
 use std::io::{self, BufRead, Write};
-use std::os::raw::{c_char, c_int};
+use std::os::raw::c_char;
 use std::process::ExitCode;
 use std::time::Instant;
 
@@ -167,17 +167,17 @@ struct UnixTime {
 
 impl UnixTime {
     fn now() -> Self {
-        let mut tv = TimeVal {
+        let mut tv = libc::timeval {
             tv_sec: 0,
             tv_usec: 0,
         };
         // SAFETY: `tv` points to valid writable memory and no timezone pointer
         // is supplied.
         unsafe {
-            gettimeofday(&raw mut tv, std::ptr::null_mut());
+            libc::gettimeofday(&raw mut tv, std::ptr::null_mut());
         }
         Self {
-            seconds: tv.tv_sec,
+            seconds: time_t_to_i64(tv.tv_sec),
             microseconds: tv.tv_usec.try_into().unwrap_or(0),
         }
     }
@@ -205,6 +205,17 @@ impl UnixTime {
     }
 }
 
+#[allow(clippy::useless_conversion)]
+fn time_t_to_i64(value: libc::time_t) -> i64 {
+    value.try_into().unwrap_or_else(|_| {
+        if value.is_negative() {
+            i64::MIN
+        } else {
+            i64::MAX
+        }
+    })
+}
+
 fn format_time(format: &str, stamp: UnixTime, utc: bool) -> io::Result<String> {
     if format.is_empty() {
         return Ok(String::new());
@@ -213,26 +224,33 @@ fn format_time(format: &str, stamp: UnixTime, utc: bool) -> io::Result<String> {
     let expanded = expand_subseconds(format, stamp.microseconds);
     let c_format = CString::new(expanded)
         .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "format contains NUL byte"))?;
-    let mut time = stamp.seconds;
-    let mut tm = Tm::default();
+    let mut time = libc::time_t::try_from(stamp.seconds).map_err(|_| {
+        io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "timestamp is outside platform time_t range",
+        )
+    })?;
+    let mut tm = std::mem::MaybeUninit::<libc::tm>::uninit();
 
     let tm_ptr = if utc {
         // SAFETY: Pointers refer to initialized local variables.
-        unsafe { gmtime_r(&raw mut time, &raw mut tm) }
+        unsafe { libc::gmtime_r(&raw mut time, tm.as_mut_ptr()) }
     } else {
         // SAFETY: Pointers refer to initialized local variables.
-        unsafe { localtime_r(&raw mut time, &raw mut tm) }
+        unsafe { libc::localtime_r(&raw mut time, tm.as_mut_ptr()) }
     };
     if tm_ptr.is_null() {
         return Err(io::Error::last_os_error());
     }
+    // SAFETY: localtime_r/gmtime_r returned non-null, so `tm` has been initialized.
+    let tm = unsafe { tm.assume_init() };
 
     let mut buffer = vec![0_u8; 256];
     loop {
         // SAFETY: `buffer` is writable, `c_format` is NUL-terminated, and
         // `tm` was initialized by localtime_r/gmtime_r.
         let written = unsafe {
-            strftime(
+            libc::strftime(
                 buffer.as_mut_ptr().cast::<c_char>(),
                 buffer.len(),
                 c_format.as_ptr(),
@@ -264,35 +282,4 @@ fn expand_subseconds(format: &str, microseconds: u32) -> String {
 fn print_usage() {
     println!("ts [-r] [-i | -s] [-m] [format]");
     println!("  add a timestamp to the beginning of each input line");
-}
-
-#[repr(C)]
-#[derive(Debug, Default)]
-struct TimeVal {
-    tv_sec: i64,
-    tv_usec: i32,
-}
-
-#[repr(C)]
-#[derive(Debug, Default)]
-#[allow(clippy::struct_field_names)]
-struct Tm {
-    tm_sec: c_int,
-    tm_min: c_int,
-    tm_hour: c_int,
-    tm_mday: c_int,
-    tm_mon: c_int,
-    tm_year: c_int,
-    tm_wday: c_int,
-    tm_yday: c_int,
-    tm_isdst: c_int,
-    tm_gmtoff: i64,
-    tm_zone: *const c_char,
-}
-
-unsafe extern "C" {
-    fn gettimeofday(tp: *mut TimeVal, tzp: *mut std::ffi::c_void) -> c_int;
-    fn localtime_r(timep: *mut i64, result: *mut Tm) -> *mut Tm;
-    fn gmtime_r(timep: *mut i64, result: *mut Tm) -> *mut Tm;
-    fn strftime(s: *mut c_char, max: usize, format: *const c_char, tm: *const Tm) -> usize;
 }
