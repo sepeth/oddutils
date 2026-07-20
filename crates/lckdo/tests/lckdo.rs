@@ -68,7 +68,7 @@ fn direct_exec_keeps_requested_fd_open() {
         .arg(&lock)
         .arg("sh")
         .arg("-c")
-        .arg("test -e /dev/fd/9 || test -e /proc/self/fd/9")
+        .arg(": <&9")
         .output()
         .unwrap();
 
