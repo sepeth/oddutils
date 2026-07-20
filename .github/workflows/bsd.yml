@@ -55,8 +55,7 @@ jobs:
           usesh: true
           prepare: |
             export PATH="/usr/pkg/sbin:/usr/pkg/bin:$PATH"
-            pkgin update
-            pkgin -y install rust scdoc
+            pkg_add rust scdoc
           run: |
             export PATH="/usr/pkg/sbin:/usr/pkg/bin:$PATH"
             cargo test
