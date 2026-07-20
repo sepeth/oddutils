@@ -32,11 +32,11 @@ Implemented behavior:
 - accepts an empty format string
 - flushes output after each stamped line
 
-Known gap:
+Implementation note:
 
-- `-r` timestamp conversion is implemented with a Rust parser for common ISO,
-  syslog, and mail-style timestamps. This intentionally is not a byte-for-byte
-  clone of Perl `Date::Parse`; oddutils also recognizes ISO timestamps without
+- `-r` timestamp conversion uses the Rust `dateparser` crate for common date
+  formats instead of Perl `Date::Parse`. This intentionally is not a
+  byte-for-byte clone; oddutils also recognizes ISO timestamps without
   fractional seconds, such as `2026-07-20T18:31:19Z`.
 
 ## chronic

@@ -6,7 +6,7 @@ use std::process::ExitCode;
 use std::sync::OnceLock;
 use std::time::Instant;
 
-use chrono::{DateTime, Datelike, Local, LocalResult, NaiveDateTime, TimeZone};
+use chrono::{DateTime, Local};
 use regex::{Captures, Regex};
 
 fn main() -> ExitCode {
@@ -212,14 +212,27 @@ fn timestamp_regex() -> &'static Regex {
         Regex::new(
             r"(?x)
             \b(?P<timestamp>
-                \d{4}[-:]\d{2}[-:]\d{2}[T ]\d{2}:\d{2}:\d{2}
-                    (?:\.\d+)?
-                    (?:Z|[+-]\d{2}:?\d{2})?
+                (?i:[a-z]{3}),\s+\d{1,2}\s+(?i:[a-z]{3,9})\.?\s+\d{2,4}
+                    \s+\d{1,2}:\d{2}(?::\d{2}(?:\.\d+)?)?
+                    (?:\s+(?i:[a-z]{2,4})|\s+[+-]\d{2}:?\d{2})?
               |
-                (?i:[a-z]{3})\s+\d{1,2}\s+\d{2}:\d{2}:\d{2}
+                \d{4}[-:/]\d{1,2}[-:/]\d{1,2}
+                    (?:[T ]\d{1,2}:\d{2}(?::\d{2}(?:\.\d+)?)?
+                    (?:\s*(?:Z|(?i:UTC|GMT)|[+-]\d{2}:?\d{2}))?)?
               |
-                \d{1,2}\s+(?i:[a-z]{3})\s+\d{2,4}\s+\d{2}:\d{2}:\d{2}
-                    (?:\s+(?i:[a-z]{2,4})|\s+[+-]\d{4})?
+                (?i:[a-z]{3,9})\.?\s+\d{1,2},?
+                    (?:\s+\d{2,4})?
+                    (?:\s+(?:at\s+)?\d{1,2}:\d{2}(?::\d{2}(?:\.\d+)?)?
+                    (?:\s*(?i:AM|PM))?
+                    (?:\s+(?i:[a-z]{2,4})|\s+[+-]\d{2}:?\d{2})?)?
+              |
+                \d{1,2}\s+(?i:[a-z]{3,9})\.?\s+\d{2,4},?
+                    (?:\s+\d{1,2}:\d{2}(?::\d{2}(?:\.\d+)?)?
+                    (?:\s+(?i:[a-z]{2,4})|\s+[+-]\d{2}:?\d{2})?)?
+              |
+                \d{1,2}[/.]\d{1,2}[/.]\d{2,4}
+                    (?:\s+\d{1,2}:\d{2}(?::\d{2}(?:\.\d+)?)?
+                    (?:\s*(?i:AM|PM))?)?
             )\b",
         )
         .expect("timestamp regex is valid")
@@ -227,49 +240,15 @@ fn timestamp_regex() -> &'static Regex {
 }
 
 fn parse_timestamp(timestamp: &str) -> Option<DateTime<Local>> {
-    parse_iso_timestamp(timestamp)
-        .or_else(|| parse_syslog_timestamp(timestamp))
-        .or_else(|| parse_dated_timestamp(timestamp))
-}
-
-fn parse_iso_timestamp(timestamp: &str) -> Option<DateTime<Local>> {
     let mut normalized = timestamp.to_string();
     if normalized.as_bytes().get(4) == Some(&b':') && normalized.as_bytes().get(7) == Some(&b':') {
         normalized.replace_range(4..5, "-");
         normalized.replace_range(7..8, "-");
     }
 
-    DateTime::parse_from_rfc3339(&normalized)
+    dateparser::parse_with_timezone(&normalized, &Local)
         .map(|parsed| parsed.with_timezone(&Local))
         .ok()
-        .or_else(|| {
-            DateTime::parse_from_str(&normalized, "%Y-%m-%dT%H:%M:%S%.f%z")
-                .map(|parsed| parsed.with_timezone(&Local))
-                .ok()
-        })
-        .or_else(|| local_datetime(&normalized, "%Y-%m-%dT%H:%M:%S%.f"))
-        .or_else(|| local_datetime(&normalized, "%Y-%m-%d %H:%M:%S%.f"))
-}
-
-fn parse_syslog_timestamp(timestamp: &str) -> Option<DateTime<Local>> {
-    let with_year = format!("{} {timestamp}", Local::now().year());
-    local_datetime(&with_year, "%Y %b %e %H:%M:%S")
-}
-
-fn parse_dated_timestamp(timestamp: &str) -> Option<DateTime<Local>> {
-    local_datetime(timestamp, "%e %b %Y %H:%M:%S")
-        .or_else(|| local_datetime(timestamp, "%e %b %y %H:%M:%S"))
-        .or_else(|| local_datetime(timestamp, "%a, %e %b %Y %H:%M:%S"))
-        .or_else(|| local_datetime(timestamp, "%a %e %b %Y %H:%M:%S"))
-}
-
-fn local_datetime(text: &str, format: &str) -> Option<DateTime<Local>> {
-    let parsed = NaiveDateTime::parse_from_str(text, format).ok()?;
-    match Local.from_local_datetime(&parsed) {
-        LocalResult::Single(time) => Some(time),
-        LocalResult::Ambiguous(earlier, _) => Some(earlier),
-        LocalResult::None => None,
-    }
 }
 
 fn concise_duration(seconds: i64) -> String {

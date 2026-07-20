@@ -61,6 +61,13 @@ fn relative_mode_reformats_moreutils_fractional_iso() {
 }
 
 #[test]
+fn relative_mode_reformats_rfc2822_timestamp() {
+    let output = run_ts(&["-r", "%Y"], b"Wed, 02 Jun 2021 06:31:39 GMT mail event\n");
+
+    assert_eq!(output.stdout, b"2021 mail event\n");
+}
+
+#[test]
 fn relative_mode_describes_old_timestamp() {
     let output = run_ts(&["-r"], b"1970-01-01T00:00:00Z old event\n");
     let text = String::from_utf8(output.stdout).unwrap();
