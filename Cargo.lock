@@ -30,6 +30,9 @@ version = "0.1.0"
 [[package]]
 name = "oddutils-ifdata"
 version = "0.1.0"
+dependencies = [
+ "libc",
+]
 
 [[package]]
 name = "oddutils-ifne"

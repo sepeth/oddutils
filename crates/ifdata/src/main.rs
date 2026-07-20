@@ -1,6 +1,8 @@
 use std::env;
-use std::ffi::OsString;
-use std::process::{Command, ExitCode};
+use std::ffi::{CStr, CString, OsString};
+use std::net::Ipv4Addr;
+use std::process::ExitCode;
+use std::ptr;
 
 fn main() -> ExitCode {
     match Config::parse(env::args_os().skip(1)) {
@@ -131,46 +133,58 @@ struct InterfaceInfo {
 
 impl InterfaceInfo {
     fn load(iface: &str) -> Self {
-        let output = Command::new("ifconfig").arg(iface).output();
-        let Ok(output) = output else {
+        let Ok(c_iface) = CString::new(iface) else {
             return Self::missing();
         };
-        if !output.status.success() {
-            return Self::missing();
-        }
-        let text = String::from_utf8_lossy(&output.stdout);
         let mut info = Self {
-            exists: true,
+            exists: interface_exists(&c_iface),
             address: None,
             netmask: None,
             broadcast: None,
-            mtu: None,
+            mtu: interface_mtu(&c_iface),
         };
 
-        for line in text.lines() {
-            let parts = line.split_whitespace().collect::<Vec<_>>();
-            if info.mtu.is_none()
-                && let Some(index) = parts.iter().position(|part| *part == "mtu")
-            {
-                info.mtu = parts.get(index + 1).and_then(|value| value.parse().ok());
+        let mut addrs = ptr::null_mut();
+        // SAFETY: `addrs` is a valid out pointer. On success it is later
+        // released with `freeifaddrs`.
+        if unsafe { libc::getifaddrs(&raw mut addrs) } != 0 {
+            return if info.exists { info } else { Self::missing() };
+        }
+        let _guard = IfAddrs(addrs);
+        let mut current = addrs;
+        while !current.is_null() {
+            // SAFETY: `current` walks the linked list returned by getifaddrs.
+            let entry = unsafe { &*current };
+            if interface_name_matches(entry, &c_iface) {
+                info.exists = true;
+                info.capture_ipv4(entry);
             }
-            if parts.first() == Some(&"inet") {
-                info.address = parts.get(1).map(|value| (*value).to_string());
-                for (index, part) in parts.iter().enumerate() {
-                    match *part {
-                        "netmask" => {
-                            info.netmask = parts.get(index + 1).map(|value| parse_netmask(value));
-                        }
-                        "broadcast" => {
-                            info.broadcast = parts.get(index + 1).map(|value| (*value).to_string());
-                        }
-                        _ => {}
-                    }
-                }
-            }
+            current = entry.ifa_next;
         }
 
-        info
+        if info.exists { info } else { Self::missing() }
+    }
+
+    fn capture_ipv4(&mut self, entry: &libc::ifaddrs) {
+        if entry.ifa_addr.is_null() {
+            return;
+        }
+        // SAFETY: `ifa_addr` is non-null and points to a sockaddr.
+        if unsafe { (*entry.ifa_addr).sa_family } != af_inet() {
+            return;
+        }
+
+        if self.address.is_none() {
+            self.address = sockaddr_ipv4(entry.ifa_addr);
+        }
+        if self.netmask.is_none() {
+            self.netmask = sockaddr_ipv4(entry.ifa_netmask);
+        }
+        if self.broadcast.is_none()
+            && (entry.ifa_flags & u32::try_from(libc::IFF_BROADCAST).unwrap_or(0)) != 0
+        {
+            self.broadcast = sockaddr_ipv4(interface_broadcast(entry));
+        }
     }
 
     fn missing() -> Self {
@@ -184,19 +198,129 @@ impl InterfaceInfo {
     }
 }
 
-fn parse_netmask(value: &str) -> String {
-    if let Some(hex) = value.strip_prefix("0x")
-        && let Ok(mask) = u32::from_str_radix(hex, 16)
-    {
-        return format!(
-            "{}.{}.{}.{}",
-            (mask >> 24) & 0xff,
-            (mask >> 16) & 0xff,
-            (mask >> 8) & 0xff,
-            mask & 0xff
-        );
+struct IfAddrs(*mut libc::ifaddrs);
+
+impl Drop for IfAddrs {
+    fn drop(&mut self) {
+        if !self.0.is_null() {
+            // SAFETY: `self.0` was returned by getifaddrs and has not been freed.
+            unsafe {
+                libc::freeifaddrs(self.0);
+            }
+        }
     }
-    value.to_string()
+}
+
+fn interface_exists(iface: &CStr) -> bool {
+    // SAFETY: `iface` is a NUL-terminated interface name.
+    unsafe { libc::if_nametoindex(iface.as_ptr()) != 0 }
+}
+
+fn interface_name_matches(entry: &libc::ifaddrs, iface: &CStr) -> bool {
+    if entry.ifa_name.is_null() {
+        return false;
+    }
+    // SAFETY: getifaddrs provides NUL-terminated interface names.
+    unsafe { CStr::from_ptr(entry.ifa_name) == iface }
+}
+
+fn sockaddr_ipv4(sockaddr_ptr: *const libc::sockaddr) -> Option<String> {
+    if sockaddr_ptr.is_null() {
+        return None;
+    }
+    // SAFETY: Caller checked the address family or accepts None for non-IPv4.
+    let sockaddr = unsafe { &*sockaddr_ptr };
+    if sockaddr.sa_family != af_inet() {
+        return None;
+    }
+    // SAFETY: AF_INET sockaddr values have sockaddr_in layout.
+    let inet = unsafe { ptr::read_unaligned(sockaddr_ptr.cast::<libc::sockaddr_in>()) };
+    Some(Ipv4Addr::from(inet.sin_addr.s_addr.to_ne_bytes()).to_string())
+}
+
+fn af_inet() -> libc::sa_family_t {
+    libc::sa_family_t::try_from(libc::AF_INET).unwrap_or_default()
+}
+
+#[cfg(any(target_os = "android", target_os = "linux"))]
+fn interface_broadcast(entry: &libc::ifaddrs) -> *const libc::sockaddr {
+    entry.ifa_ifu.cast_const()
+}
+
+#[cfg(not(any(target_os = "android", target_os = "linux")))]
+fn interface_broadcast(entry: &libc::ifaddrs) -> *const libc::sockaddr {
+    entry.ifa_dstaddr.cast_const()
+}
+
+#[cfg(any(
+    target_os = "android",
+    target_os = "freebsd",
+    target_os = "ios",
+    target_os = "linux",
+    target_os = "macos",
+    target_os = "netbsd"
+))]
+fn interface_mtu(iface: &CStr) -> Option<u32> {
+    // SAFETY: socket arguments are constant values for a datagram IPv4 socket.
+    let socket = unsafe { libc::socket(libc::AF_INET, libc::SOCK_DGRAM, 0) };
+    if socket < 0 {
+        return None;
+    }
+
+    // SAFETY: zeroed ifreq is a valid starting point before fields are filled
+    // for SIOCGIFMTU.
+    let mut request = unsafe { std::mem::zeroed::<libc::ifreq>() };
+    copy_interface_name(&mut request.ifr_name, iface);
+
+    // SAFETY: `request` points to writable ifreq storage for SIOCGIFMTU.
+    let result = unsafe { libc::ioctl(socket, siocgifmtu(), &raw mut request) };
+    // SAFETY: `socket` is an open file descriptor returned by socket.
+    unsafe {
+        libc::close(socket);
+    }
+
+    if result < 0 {
+        None
+    } else {
+        // SAFETY: SIOCGIFMTU initializes the ifru_mtu union member on these
+        // targets.
+        u32::try_from(unsafe { request.ifr_ifru.ifru_mtu }).ok()
+    }
+}
+
+#[cfg(any(target_os = "ios", target_os = "macos"))]
+const fn siocgifmtu() -> libc::c_ulong {
+    3_223_349_555
+}
+
+#[cfg(any(
+    target_os = "android",
+    target_os = "freebsd",
+    target_os = "linux",
+    target_os = "netbsd"
+))]
+const fn siocgifmtu() -> libc::c_ulong {
+    libc::SIOCGIFMTU
+}
+
+#[cfg(not(any(
+    target_os = "android",
+    target_os = "freebsd",
+    target_os = "ios",
+    target_os = "linux",
+    target_os = "macos",
+    target_os = "netbsd"
+)))]
+fn interface_mtu(_iface: &CStr) -> Option<u32> {
+    None
+}
+
+fn copy_interface_name(dest: &mut [libc::c_char], iface: &CStr) {
+    let bytes = iface.to_bytes();
+    let len = bytes.len().min(dest.len().saturating_sub(1));
+    for (slot, byte) in dest.iter_mut().zip(bytes.iter().copied()).take(len) {
+        *slot = byte.cast_signed();
+    }
 }
 
 fn network_address(address: Option<&str>, netmask: Option<&str>) -> Option<String> {
