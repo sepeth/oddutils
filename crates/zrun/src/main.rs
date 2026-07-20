@@ -40,10 +40,10 @@ impl Config {
             .and_then(OsStr::to_str)
             .unwrap_or("zrun");
 
-        if let Some(program) = invoked.strip_prefix('z')
-            && program != "run"
-            && !program.is_empty()
-        {
+        if let Some(program) = match invoked.strip_prefix('z') {
+            Some(program) if program != "run" && !program.is_empty() => Some(program),
+            _ => None,
+        } {
             let rest = args.collect::<Vec<_>>();
             if rest.is_empty() {
                 return Err(format!("missing arguments for z{program}"));
