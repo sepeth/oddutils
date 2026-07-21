@@ -1,0 +1,47 @@
+images:
+  - location: "https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-generic-amd64.qcow2"
+    arch: "x86_64"
+  - location: "https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-generic-arm64.qcow2"
+    arch: "aarch64"
+
+param:
+  REPO: "/tmp/oddutils"
+
+cpus: 4
+memory: "4GiB"
+disk: "30GiB"
+
+containerd:
+  system: false
+  user: false
+
+mounts:
+  - location: "{{.Param.REPO}}"
+    mountPoint: "/workspace/oddutils"
+    writable: true
+
+provision:
+  - mode: system
+    script: |
+      #!/bin/sh
+      set -eu
+      export DEBIAN_FRONTEND=noninteractive
+      apt-get update
+      apt-get install -y --no-install-recommends \
+        build-essential \
+        ca-certificates \
+        curl \
+        scdoc
+  - mode: user
+    script: |
+      #!/bin/sh
+      set -eu
+      if ! command -v cargo >/dev/null 2>&1; then
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
+          | sh -s -- -y --profile minimal
+      fi
+
+message: |
+  oddutils checkout mounted at /workspace/oddutils
+  Run tests with:
+    limactl shell {{.Name}} --workdir /workspace/oddutils bash -lc 'cargo test'

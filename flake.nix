@@ -18,6 +18,7 @@
             cargo-nextest
             clippy
             just
+            lima-full
             rustc
             rustfmt
             scdoc

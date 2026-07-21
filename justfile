@@ -8,6 +8,7 @@ user-prefix := env_var_or_default("USER_PREFIX", env_var("HOME") + "/.local")
 user-bindir := user-prefix + "/bin"
 user-man1dir := user-prefix + "/share/man/man1"
 container-runtime := env_var_or_default("CONTAINER_RUNTIME", "docker")
+lima-instance := env_var_or_default("LIMA_INSTANCE", "oddutils-debian")
 bins := "chronic combine errno ifdata ifne isutf8 lckdo mispipe parallel pee sponge ts vidir vipe zrun"
 
 test:
@@ -29,6 +30,18 @@ container-test: container-build
 
 container-image:
     {{container-runtime}} build -t oddutils .
+
+lima-create:
+    limactl create --name="{{lima-instance}}" --param "REPO=$PWD" .lima/debian.yaml
+
+lima-start:
+    limactl start "{{lima-instance}}"
+
+lima-test:
+    limactl shell "{{lima-instance}}" --workdir /workspace/oddutils bash -lc 'cargo test'
+
+lima-shell:
+    limactl shell "{{lima-instance}}" --workdir /workspace/oddutils
 
 man:
     mkdir -p target/man/man1
