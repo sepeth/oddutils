@@ -38,10 +38,10 @@ lima-start:
     limactl start "{{lima-instance}}"
 
 lima-test:
-    limactl shell "{{lima-instance}}" --workdir /workspace/oddutils bash -lc 'cargo test'
+    limactl shell --workdir /workspace/oddutils "{{lima-instance}}" bash -lc 'cargo test'
 
 lima-shell:
-    limactl shell "{{lima-instance}}" --workdir /workspace/oddutils
+    limactl shell --workdir /workspace/oddutils "{{lima-instance}}"
 
 man:
     mkdir -p target/man/man1

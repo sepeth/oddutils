@@ -44,4 +44,4 @@ provision:
 message: |
   oddutils checkout mounted at /workspace/oddutils
   Run tests with:
-    limactl shell {{.Name}} --workdir /workspace/oddutils bash -lc 'cargo test'
+    limactl shell --workdir /workspace/oddutils {{.Name}} bash -lc 'cargo test'
