@@ -9,6 +9,7 @@ user-bindir := user-prefix + "/bin"
 user-man1dir := user-prefix + "/share/man/man1"
 container-runtime := env_var_or_default("CONTAINER_RUNTIME", "docker")
 lima-instance := env_var_or_default("LIMA_INSTANCE", "oddutils-debian")
+lima-freebsd-instance := env_var_or_default("LIMA_FREEBSD_INSTANCE", "oddutils-freebsd")
 system-install := env_var_or_default("INSTALL", "install")
 bins := "chronic combine errno ifdata ifne isutf8 lckdo mispipe parallel pee sponge ts vidir vipe zrun"
 
@@ -51,6 +52,26 @@ lima-test:
 
 lima-shell:
     limactl shell --workdir /workspace/oddutils "{{lima-instance}}" env TERM=xterm-256color bash
+
+lima-freebsd-create:
+    limactl create --name="{{lima-freebsd-instance}}" --param "REPO=$PWD" .lima/freebsd.yaml
+
+lima-freebsd-stop:
+    limactl stop "{{lima-freebsd-instance}}"
+
+lima-freebsd-delete:
+    limactl delete --force "{{lima-freebsd-instance}}"
+
+lima-freebsd-recreate: lima-freebsd-delete lima-freebsd-create
+
+lima-freebsd-start:
+    limactl start "{{lima-freebsd-instance}}"
+
+lima-freebsd-test:
+    limactl shell --workdir /workspace/oddutils "{{lima-freebsd-instance}}" sh -lc 'just test'
+
+lima-freebsd-shell:
+    limactl shell --workdir /workspace/oddutils "{{lima-freebsd-instance}}" env TERM=xterm-256color sh
 
 man:
     mkdir -p target/man/man1

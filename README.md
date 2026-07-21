@@ -98,6 +98,18 @@ just lima-recreate
 
 This removes the existing `LIMA_INSTANCE` VM before creating it again.
 
+Build and test in a local Lima FreeBSD VM:
+
+```sh
+just lima-freebsd-create
+just lima-freebsd-start
+just lima-freebsd-test
+```
+
+The FreeBSD instance also mounts the current checkout at `/workspace/oddutils`.
+Set `LIMA_FREEBSD_INSTANCE=name` to use a different instance name.
+Use `just lima-freebsd-recreate` to delete and recreate that VM after template changes.
+
 For a user-local install, binaries go to `~/.local/bin` and manpages go to
 `~/.local/share/man/man1` by default:
 
