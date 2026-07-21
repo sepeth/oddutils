@@ -96,27 +96,6 @@ just lima-recreate
 
 This removes the existing `LIMA_INSTANCE` VM before creating it again.
 
-Install to `/usr/local` by default:
-
-```sh
-just install
-```
-
-Override the install prefix or package into a staging root:
-
-```sh
-PREFIX="$HOME/.local" just install
-DESTDIR=/tmp/pkgroot PREFIX=/usr/local just install
-```
-
-Prefix installed command and manpage names while testing alongside `moreutils`.
-For example, `sponge` installs as `osponge`:
-
-```sh
-COMMAND_PREFIX=o just install
-COMMAND_PREFIX=o PREFIX="$HOME/.local" just install
-```
-
 For a user-local install, binaries go to `~/.local/bin` and manpages go to
 `~/.local/share/man/man1` by default:
 
@@ -124,6 +103,27 @@ For a user-local install, binaries go to `~/.local/bin` and manpages go to
 just install-user
 COMMAND_PREFIX=o just install-user
 USER_PREFIX="$HOME/opt/oddutils" COMMAND_PREFIX=o just install-user
+```
+
+Install system-wide under `/usr/local`:
+
+```sh
+just install-system
+```
+
+Prefix installed command and manpage names while testing alongside `moreutils`.
+For example, `sponge` installs as `osponge`:
+
+```sh
+COMMAND_PREFIX=o just install-system
+COMMAND_PREFIX=o just install-user
+```
+
+Override the install prefix or package into a staging root:
+
+```sh
+PREFIX="$HOME/.local" just install
+DESTDIR=/tmp/pkgroot PREFIX=/usr/local just install
 ```
 
 Make sure both locations are discoverable by your shell:
