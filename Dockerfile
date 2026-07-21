@@ -1,13 +1,14 @@
-FROM rust:1-slim-bookworm AS build
+FROM rust:1-slim-trixie AS build
 
 ARG DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends scdoc \
+    && apt-get install -y --no-install-recommends just scdoc \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /work
 COPY Cargo.toml Cargo.lock ./
+COPY justfile ./
 COPY crates ./crates
 COPY docs ./docs
 
@@ -23,7 +24,7 @@ RUN mkdir -p /out/bin /out/share/man/man1 \
         chmod 0644 "/out/share/man/man1/$name"; \
     done
 
-FROM debian:bookworm-slim
+FROM debian:trixie-slim
 
 ARG DEBIAN_FRONTEND=noninteractive
 
@@ -32,6 +33,7 @@ RUN apt-get update \
         bzip2 \
         ca-certificates \
         gzip \
+        just \
         lzop \
         man-db \
         xz-utils \

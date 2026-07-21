@@ -77,7 +77,7 @@ docker run --rm oddutils ts --help
 The final image installs binaries and manpages under `/usr/local`.
 Set `CONTAINER_RUNTIME=podman` to use Podman instead of Docker.
 
-Build and test in a local Lima Debian VM:
+Build and test in a local Lima Debian trixie VM:
 
 ```sh
 just lima-create
@@ -87,6 +87,8 @@ just lima-test
 
 The Lima instance mounts the current checkout at `/workspace/oddutils`.
 Set `LIMA_INSTANCE=name` to use a different instance name.
+If you created the VM before this template changed, delete and recreate it to pick up
+the current base image and package set.
 
 Install to `/usr/local` by default:
 

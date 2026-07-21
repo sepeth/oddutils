@@ -26,7 +26,7 @@ container-build:
     {{container-runtime}} build --target build -t oddutils-build .
 
 container-test: container-build
-    {{container-runtime}} run --rm oddutils-build cargo test
+    {{container-runtime}} run --rm oddutils-build just test
 
 container-image:
     {{container-runtime}} build -t oddutils .
@@ -38,7 +38,7 @@ lima-start:
     limactl start "{{lima-instance}}"
 
 lima-test:
-    limactl shell --workdir /workspace/oddutils "{{lima-instance}}" bash -lc 'cargo test'
+    limactl shell --workdir /workspace/oddutils "{{lima-instance}}" bash -lc 'just test'
 
 lima-shell:
     limactl shell --workdir /workspace/oddutils "{{lima-instance}}"
