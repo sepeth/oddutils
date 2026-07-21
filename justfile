@@ -34,6 +34,14 @@ container-image:
 lima-create:
     limactl create --name="{{lima-instance}}" --param "REPO=$PWD" .lima/debian.yaml
 
+lima-stop:
+    limactl stop "{{lima-instance}}"
+
+lima-delete:
+    limactl delete --force "{{lima-instance}}"
+
+lima-recreate: lima-delete lima-create
+
 lima-start:
     limactl start "{{lima-instance}}"
 

@@ -88,7 +88,13 @@ just lima-test
 The Lima instance mounts the current checkout at `/workspace/oddutils`.
 Set `LIMA_INSTANCE=name` to use a different instance name.
 If you created the VM before this template changed, delete and recreate it to pick up
-the current base image and package set.
+the current base image and package set:
+
+```sh
+just lima-recreate
+```
+
+This removes the existing `LIMA_INSTANCE` VM before creating it again.
 
 Install to `/usr/local` by default:
 
