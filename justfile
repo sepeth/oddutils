@@ -10,6 +10,8 @@ user-man1dir := user-prefix + "/share/man/man1"
 container-runtime := env_var_or_default("CONTAINER_RUNTIME", "docker")
 lima-instance := env_var_or_default("LIMA_INSTANCE", "oddutils-debian")
 lima-freebsd-instance := env_var_or_default("LIMA_FREEBSD_INSTANCE", "oddutils-freebsd")
+lima-openbsd-instance := env_var_or_default("LIMA_OPENBSD_INSTANCE", "oddutils-openbsd")
+lima-openbsd-workdir := env_var_or_default("LIMA_OPENBSD_WORKDIR", "/tmp/oddutils")
 system-install := env_var_or_default("INSTALL", "install")
 bins := "chronic combine errno ifdata ifne isutf8 lckdo mispipe parallel pee sponge ts vidir vipe zrun"
 
@@ -72,6 +74,44 @@ lima-freebsd-test:
 
 lima-freebsd-shell:
     limactl shell --workdir /workspace/oddutils "{{lima-freebsd-instance}}" env TERM=xterm-256color sh
+
+lima-openbsd-create:
+    limactl create --arch=x86_64 --name="{{lima-openbsd-instance}}" .lima/openbsd.yaml
+
+lima-openbsd-stop:
+    limactl stop "{{lima-openbsd-instance}}"
+
+lima-openbsd-delete:
+    limactl delete --force "{{lima-openbsd-instance}}"
+
+lima-openbsd-recreate: lima-openbsd-delete lima-openbsd-create
+
+lima-openbsd-start:
+    #!/usr/bin/env sh
+    set -eu
+    limactl start "{{lima-openbsd-instance}}" &
+    pid=$!
+    until limactl shell "{{lima-openbsd-instance}}" sh -lc 'test -s /var/lib/cloud/data/instance-id' >/dev/null 2>&1; do
+        sleep 2
+    done
+    limactl shell "{{lima-openbsd-instance}}" sh -lc 'sudo mkdir -p /run && cat /var/lib/cloud/data/instance-id | sudo tee /run/lima-boot-done >/dev/null'
+    wait "$pid"
+
+lima-openbsd-disk:
+    limactl shell "{{lima-openbsd-instance}}" env TERM=xterm-256color sh -lc 'if mount | grep -q " on /usr/local "; then exit 0; fi; printf "e 3\nA6\nn\n64\n*\nf 3\nw\nq\n" | sudo fdisk -e sd0; printf "b\n\n*\nw\nq\n" | sudo disklabel -v -f /etc/fstab -E sd0; sudo /root/bin/create_partitions.sh'
+
+lima-openbsd-setup: lima-openbsd-disk
+    limactl shell "{{lima-openbsd-instance}}" env TERM=xterm-256color sh -lc 'command -v cargo >/dev/null && command -v scdoc >/dev/null && command -v just >/dev/null || sudo pkg_add rust scdoc just'
+
+lima-openbsd-sync:
+    limactl shell "{{lima-openbsd-instance}}" sh -lc 'rm -rf "{{lima-openbsd-workdir}}" && mkdir -p "{{lima-openbsd-workdir}}"'
+    limactl copy --backend=scp -r Cargo.toml Cargo.lock justfile crates docs "{{lima-openbsd-instance}}:{{lima-openbsd-workdir}}/"
+
+lima-openbsd-test: lima-openbsd-setup lima-openbsd-sync
+    limactl shell --workdir "{{lima-openbsd-workdir}}" "{{lima-openbsd-instance}}" env TERM=xterm-256color sh -lc 'just test'
+
+lima-openbsd-shell:
+    limactl shell "{{lima-openbsd-instance}}" env TERM=xterm-256color sh -lc 'mkdir -p "{{lima-openbsd-workdir}}" && cd "{{lima-openbsd-workdir}}" && exec sh'
 
 man:
     mkdir -p target/man/man1

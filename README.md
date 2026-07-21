@@ -110,6 +110,22 @@ The FreeBSD instance also mounts the current checkout at `/workspace/oddutils`.
 Set `LIMA_FREEBSD_INSTANCE=name` to use a different instance name.
 Use `just lima-freebsd-recreate` to delete and recreate that VM after template changes.
 
+Build and test in an experimental local Lima OpenBSD VM:
+
+```sh
+just lima-openbsd-create
+just lima-openbsd-start
+just lima-openbsd-test
+```
+
+This uses an unofficial OpenBSD 7.9 cloud-init image because Lima does not ship an
+OpenBSD template and OpenBSD does not publish official cloud images. The image is
+x86_64-only, so it runs under QEMU emulation on Apple Silicon. The OpenBSD VM runs
+without Lima guest integration, so `just lima-openbsd-start` completes Lima's boot
+marker over SSH, and `just lima-openbsd-test` copies the checkout into `/tmp/oddutils`
+before running tests. Set `LIMA_OPENBSD_INSTANCE=name` to use a different instance
+name, or `LIMA_OPENBSD_WORKDIR=/path` to change the guest workdir.
+
 For a user-local install, binaries go to `~/.local/bin` and manpages go to
 `~/.local/share/man/man1` by default:
 

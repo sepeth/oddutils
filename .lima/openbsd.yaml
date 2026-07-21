@@ -1,0 +1,40 @@
+# Experimental: Lima does not ship an OpenBSD template. This uses an
+# unofficial cloud-init image from hcartiaux/openbsd-cloud-image.
+minimumLimaVersion: 2.1.0
+
+images:
+  - location: "https://github.com/hcartiaux/openbsd-cloud-image/releases/download/v7.9_2026-06-03-20-46/openbsd-min.qcow2"
+    arch: "x86_64"
+
+# Lima has no OpenBSD OS mode. FreeBSD mode avoids Linux-specific readiness
+# probes while still leaving the guest image itself as OpenBSD.
+os: FreeBSD
+vmType: qemu
+
+firmware:
+  legacyBIOS: true
+
+user:
+  shell: "/bin/sh"
+
+cpus: 4
+memory: "4GiB"
+disk: "30GiB"
+
+hostResolver:
+  enabled: false
+
+dns:
+  - 1.1.1.1
+  - 8.8.8.8
+
+containerd:
+  system: false
+  user: false
+
+plain: true
+
+message: |
+  Experimental OpenBSD VM. Lima guest integration is disabled; use limactl copy.
+  Run tests with:
+    just lima-openbsd-test
