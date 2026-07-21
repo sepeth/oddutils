@@ -87,6 +87,8 @@ just lima-test
 
 The Lima instance mounts the current checkout at `/workspace/oddutils`.
 Set `LIMA_INSTANCE=name` to use a different instance name.
+`just lima-shell` uses `TERM=xterm-256color` inside the VM so terminal editors
+work from terminals whose terminfo entries are not installed in the guest.
 If you created the VM before this template changed, delete and recreate it to pick up
 the current base image and package set:
 

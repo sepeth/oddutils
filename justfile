@@ -50,7 +50,7 @@ lima-test:
     limactl shell --workdir /workspace/oddutils "{{lima-instance}}" bash -lc 'just test'
 
 lima-shell:
-    limactl shell --workdir /workspace/oddutils "{{lima-instance}}"
+    limactl shell --workdir /workspace/oddutils "{{lima-instance}}" env TERM=xterm-256color bash
 
 man:
     mkdir -p target/man/man1
