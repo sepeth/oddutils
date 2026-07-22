@@ -21,30 +21,32 @@ packaged like normal Unix tools while still sharing common code.
 
 ## License
 
-`oddutils` is licensed under the GNU General Public License version 2 only.
+Given that `moreutils` is used as a reference, `oddutils` is also licensed under the GNU General Public License version 2 only.
 See `COPYING`.
 
 ## Utility Status
 
-| Utility | Status | Notes |
-| --- | --- | --- |
-| `sponge` | Initial implementation | Reads all input before writing the output file; supports `-a`. |
-| `ts` | Initial implementation | Timestamp standard input; `-r` supports common ISO, syslog, and mail-style timestamps. |
-| `chronic` | Initial implementation | Run a command quietly unless it fails. |
-| `ifne` | Initial implementation | Run a command if standard input is not empty. |
-| `pee` | Initial implementation | Tee standard input to pipes. |
-| `mispipe` | Initial implementation | Pipe two commands, returning the first status. |
-| `isutf8` | Initial implementation | Check input for valid UTF-8. |
-| `errno` | Initial implementation | Look up errno names and descriptions. |
-| `vidir` | Initial implementation | Edit directory entries in `$EDITOR`. |
-| `vipe` | Initial implementation | Insert an editor into a pipe. |
-| `combine` | Initial implementation | Combine line sets with boolean operations. |
-| `zrun` | Initial implementation | Run commands over compressed arguments. |
-| `ifdata` | Initial implementation | Read core network interface information. |
-| `lckdo` | Initial implementation | Run a command with a lock held. |
-| `parallel` | Initial implementation | Run commands in parallel. |
+| Utility | Notes |
+| --- | --- |
+| `sponge` | Reads all input before writing the output file; supports `-a`. |
+| `ts` | Timestamp standard input; `-r` supports common ISO, syslog, and mail-style timestamps. |
+| `chronic` | Run a command quietly unless it fails. |
+| `ifne` | Run a command if standard input is not empty. |
+| `pee` | Tee standard input to pipes. |
+| `mispipe` | Pipe two commands, returning the first status. |
+| `isutf8` | Check input for valid UTF-8. |
+| `errno` | Look up errno names and descriptions. |
+| `vidir` | Edit directory entries in `$EDITOR`. |
+| `vipe` | Insert an editor into a pipe. |
+| `combine` | Combine line sets with boolean operations. |
+| `zrun` | Run commands over compressed arguments. |
+| `ifdata` | Read core network interface information. |
+| `lckdo` | Run a command with a lock held. |
+| `parallel` | Run commands in parallel. |
 
 ## Development
+
+### Local
 
 Enter the dev shell:
 
@@ -66,6 +68,53 @@ Generate manpages:
 just man
 ```
 
+### Installation
+
+For a user-local install, binaries go to `~/.local/bin` and manpages go to
+`~/.local/share/man/man1` by default:
+
+```sh
+just install-user
+```
+
+Install to a custom user prefix:
+
+```sh
+USER_PREFIX="$HOME/opt/oddutils" just install-user
+```
+
+Install system-wide under `/usr/local`:
+
+```sh
+just install-system
+```
+
+Set `COMMAND_PREFIX` to install command and manpage names alongside `moreutils`
+without colliding with the original tools. For example, `sponge` installs as
+`osponge`:
+
+```sh
+COMMAND_PREFIX=o just install-system
+COMMAND_PREFIX=o just install-user
+USER_PREFIX="$HOME/opt/oddutils" COMMAND_PREFIX=o just install-user
+```
+
+Override the install prefix or package into a staging root:
+
+```sh
+PREFIX="$HOME/.local" just install
+DESTDIR=/tmp/pkgroot PREFIX=/usr/local just install
+```
+
+Make sure both locations are discoverable by your shell:
+
+```sh
+export PATH="$HOME/.local/bin:$PATH"
+export MANPATH="$HOME/.local/share/man:$(manpath)"
+```
+
+### Container
+
 Build and test in a Linux container:
 
 ```sh
@@ -76,6 +125,8 @@ docker run --rm oddutils ts --help
 
 The final image installs binaries and manpages under `/usr/local`.
 Set `CONTAINER_RUNTIME=podman` to use Podman instead of Docker.
+
+### Lima
 
 Build and test in a local Lima Debian trixie VM:
 
@@ -89,14 +140,7 @@ The Lima instance mounts the current checkout at `/workspace/oddutils`.
 Set `LIMA_INSTANCE=name` to use a different instance name.
 `just lima-shell` uses `TERM=xterm-256color` inside the VM so terminal editors
 work from terminals whose terminfo entries are not installed in the guest.
-If you created the VM before this template changed, delete and recreate it to pick up
-the current base image and package set:
-
-```sh
-just lima-recreate
-```
-
-This removes the existing `LIMA_INSTANCE` VM before creating it again.
+Use `just lima-recreate` to delete and recreate that VM after template changes.
 
 Build and test in a local Lima FreeBSD VM:
 
@@ -125,40 +169,3 @@ without Lima guest integration, so `just lima-openbsd-start` completes Lima's bo
 marker over SSH, and `just lima-openbsd-test` copies the checkout into `/tmp/oddutils`
 before running tests. Set `LIMA_OPENBSD_INSTANCE=name` to use a different instance
 name, or `LIMA_OPENBSD_WORKDIR=/path` to change the guest workdir.
-
-For a user-local install, binaries go to `~/.local/bin` and manpages go to
-`~/.local/share/man/man1` by default:
-
-```sh
-just install-user
-COMMAND_PREFIX=o just install-user
-USER_PREFIX="$HOME/opt/oddutils" COMMAND_PREFIX=o just install-user
-```
-
-Install system-wide under `/usr/local`:
-
-```sh
-just install-system
-```
-
-Prefix installed command and manpage names while testing alongside `moreutils`.
-For example, `sponge` installs as `osponge`:
-
-```sh
-COMMAND_PREFIX=o just install-system
-COMMAND_PREFIX=o just install-user
-```
-
-Override the install prefix or package into a staging root:
-
-```sh
-PREFIX="$HOME/.local" just install
-DESTDIR=/tmp/pkgroot PREFIX=/usr/local just install
-```
-
-Make sure both locations are discoverable by your shell:
-
-```sh
-export PATH="$HOME/.local/bin:$PATH"
-export MANPATH="$HOME/.local/share/man:$(manpath)"
-```
