@@ -19,9 +19,11 @@
             clippy
             just
             lima-full
+            qemu
             rustc
             rustfmt
             scdoc
+            xorriso
           ];
         };
       });

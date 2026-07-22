@@ -113,6 +113,33 @@ lima-openbsd-test: lima-openbsd-setup lima-openbsd-sync
 lima-openbsd-shell:
     limactl shell "{{lima-openbsd-instance}}" env TERM=xterm-256color sh -lc 'mkdir -p "{{lima-openbsd-workdir}}" && cd "{{lima-openbsd-workdir}}" && exec sh'
 
+dragonfly-qemu-create:
+    scripts/dragonfly-qemu.sh create
+
+dragonfly-qemu-start:
+    scripts/dragonfly-qemu.sh start
+
+dragonfly-qemu-stop:
+    scripts/dragonfly-qemu.sh stop
+
+dragonfly-qemu-delete:
+    scripts/dragonfly-qemu.sh delete
+
+dragonfly-qemu-setup:
+    scripts/dragonfly-qemu.sh setup
+
+dragonfly-qemu-sync:
+    scripts/dragonfly-qemu.sh sync
+
+dragonfly-qemu-test:
+    scripts/dragonfly-qemu.sh test
+
+dragonfly-qemu-shell:
+    scripts/dragonfly-qemu.sh shell
+
+dragonfly-qemu-logs:
+    scripts/dragonfly-qemu.sh logs
+
 man:
     mkdir -p target/man/man1
     for src in docs/man/*.1.scd; do name=$(basename "$src" .scd); scdoc < "$src" > "target/man/man1/$name"; done

@@ -169,3 +169,30 @@ without Lima guest integration, so `just lima-openbsd-start` completes Lima's bo
 marker over SSH, and `just lima-openbsd-test` copies the checkout into `/tmp/oddutils`
 before running tests. Set `LIMA_OPENBSD_INSTANCE=name` to use a different instance
 name, or `LIMA_OPENBSD_WORKDIR=/path` to change the guest workdir.
+
+Build and test in an experimental local DragonFlyBSD QEMU VM:
+
+```sh
+just dragonfly-qemu-test
+```
+
+DragonFlyBSD does not publish official cloud images, and Lima does not currently
+generate DragonFly-compatible cloud-init network metadata. This harness uses the
+bsd-cloud-image.org DragonFlyBSD 6.4 HAMMER2 image directly with QEMU and writes
+NoCloud metadata for DragonFly's `vtnet0` network interface. It keeps the base
+image under `~/.cache/oddutils/dragonfly-qemu` and VM state under
+`~/.local/state/oddutils/dragonfly-qemu`.
+
+Useful commands:
+
+```sh
+just dragonfly-qemu-start
+just dragonfly-qemu-shell
+just dragonfly-qemu-logs
+just dragonfly-qemu-stop
+just dragonfly-qemu-delete
+```
+
+Set `DRAGONFLY_SSH_PORT`, `DRAGONFLY_STATE_DIR`, or `DRAGONFLY_CACHE_DIR` to
+customize the local VM. The harness uses Lima's SSH key from `~/.lima/_config/user`
+by default; set `DRAGONFLY_SSH_KEY` and `DRAGONFLY_SSH_PUB_KEY` to use another key.
