@@ -97,7 +97,7 @@ fn run(config: &Config) -> io::Result<u8> {
     let mut input = io::stdin().lock();
     let mut buffer = [0_u8; 8192];
 
-    loop {
+    'input: loop {
         let read = input.read(&mut buffer)?;
         if read == 0 {
             break;
@@ -124,8 +124,7 @@ fn run(config: &Config) -> io::Result<u8> {
                     return Ok(1);
                 }
                 if children.iter().all(|child| child.inactive) {
-                    close_and_wait(children)?;
-                    return Ok(1);
+                    break 'input;
                 }
             }
         }
